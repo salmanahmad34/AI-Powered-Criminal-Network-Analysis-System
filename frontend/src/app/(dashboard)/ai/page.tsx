@@ -2,9 +2,16 @@
 
 import React, { useState } from 'react';
 
+interface Message {
+  sender: string;
+  text: string;
+  suggestion?: string;
+  time: string;
+}
+
 export default function AIAssistantPage() {
   const [inputQuery, setInputQuery] = useState('');
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'AI',
       text: 'Welcome to CrimeGraph AI Assistant. How can I help you analyze the active data nodes today?',

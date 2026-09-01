@@ -3,6 +3,7 @@ import { z } from 'zod';
 import prisma from '../../config/database';
 import { extractTextFromBuffer } from './pdf-extractor';
 import { AIProviderManager } from '../ai/provider.manager';
+import { graphSyncService } from '../graph/graph-sync.service';
 import { EntityType, RelationshipType, AuditAction } from '@prisma/client';
 import logger from '../../utils/logger';
 
@@ -182,7 +183,14 @@ export async function runDocumentExtraction(
       });
     }
 
-    // 7. Update document completion status
+    // 7. Trigger idempotent graph synchronization to Neo4j Aura
+    try {
+      await graphSyncService.syncCaseToGraph(doc.caseId);
+    } catch (syncErr) {
+      logger.error(`Graph sync notification error for case ${doc.caseId}`, syncErr);
+    }
+
+    // 8. Update document completion status
     await prisma.document.update({
       where: { id: documentId },
       data: {

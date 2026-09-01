@@ -53,6 +53,7 @@ export const config = {
     uri: getOptionalEnv('NEO4J_URI', 'bolt://localhost:7687'),
     user: getOptionalEnv('NEO4J_USER', 'neo4j'),
     password: getOptionalEnv('NEO4J_PASSWORD', 'crimegraph_neo4j_2026'),
+    databaseName: getOptionalEnv('NEO4J_DATABASE', 'neo4j'),
   },
 
   redis: {

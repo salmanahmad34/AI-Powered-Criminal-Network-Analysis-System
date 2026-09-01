@@ -21,6 +21,7 @@ import uploadRoutes from './routes/upload.routes';
 import processingRoutes from './routes/processing.routes';
 import documentsRoutes from './routes/documents.routes';
 import aiRoutes from './routes/ai.routes';
+import graphRoutes from './routes/graph.routes';
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/processing', processingRoutes);
 app.use('/api/documents', documentsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/graph', graphRoutes);
 
 // ─── Health Check Endpoints ────────────────────────────────
 /**
@@ -62,9 +64,9 @@ app.get('/api/health', async (_req, res) => {
   }
 
   const redisHealthy = await checkRedisHealth();
-  const neo4jHealthy = await checkNeo4jHealth();
+  const neo4jHealth = await checkNeo4jHealth();
 
-  const isHealthy = dbHealthy && redisHealthy && neo4jHealthy;
+  const isHealthy = dbHealthy && redisHealthy && neo4jHealth.connected;
 
   res.status(isHealthy ? 200 : 503).json({
     status: isHealthy ? 'healthy' : 'unhealthy',
@@ -73,7 +75,7 @@ app.get('/api/health', async (_req, res) => {
       backend: 'healthy',
       database: dbHealthy ? 'connected' : 'disconnected',
       redis: redisHealthy ? 'connected' : 'disconnected',
-      neo4j: neo4jHealthy ? 'connected' : 'disconnected',
+      neo4j: neo4jHealth.connected ? (neo4jHealth.isMock ? 'connected (mock)' : 'connected') : 'disconnected',
     },
     demoMode: process.env.MOCK_DATABASE === 'true' || config.isDemo,
   });

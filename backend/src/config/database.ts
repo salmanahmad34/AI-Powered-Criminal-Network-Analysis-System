@@ -388,6 +388,18 @@ class MockPrismaClient {
       if (args.include?.assignments) {
         copy.assignments = this.caseAssignments.filter(a => a.caseId === c.id);
       }
+      if (args.include?.documents) {
+        copy.documents = this.documents.filter(d => d.caseId === c.id);
+      }
+      if (args.include?.entities) {
+        copy.entities = this.entities
+          .filter(e => e.caseId === c.id)
+          .map(e => ({
+            ...e,
+            aliases: this.entityAliases.filter(a => a.entityId === e.id),
+            identifiers: this.entityIdentifiers.filter(i => i.entityId === e.id),
+          }));
+      }
       return copy;
     },
     create: async (args: { data: any; include?: any }) => {

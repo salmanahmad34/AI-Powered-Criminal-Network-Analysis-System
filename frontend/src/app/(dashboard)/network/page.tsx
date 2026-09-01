@@ -1,15 +1,126 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+interface GraphNode {
+  id: string;
+  label: string;
+  type: string;
+  category: string;
+  confidence: number;
+  caseId: string;
+}
+
+interface GraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  type: string;
+  label: string;
+  confidence: number;
+}
+
+interface GraphStats {
+  totalNodes: number;
+  totalEdges: number;
+  density: number;
+}
 
 export default function NetworkAnalysisPage() {
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [selectedNode, setSelectedNode] = useState<string | null>('Rohan Sharma');
-  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [edges, setEdges] = useState<GraphEdge[]>([]);
+  const [stats, setStats] = useState<GraphStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  const defaultCaseId = 'CASE-2026-001';
+
+  const fetchGraphData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/graph/case/${defaultCaseId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNodes(data.nodes || []);
+        setEdges(data.edges || []);
+        setStats(data.stats || null);
+        if (data.nodes && data.nodes.length > 0) {
+          setSelectedNode(data.nodes[0]);
+        }
+      }
+    } catch (err) {
+      // Fallback placeholder data if offline
+      const fallbackNodes = [
+        { id: 'ent-1', label: 'Rohan Sharma', type: 'PERSON', category: 'Person of Interest', confidence: 0.98, caseId: defaultCaseId },
+        { id: 'ent-2', label: '+91 98765 43210', type: 'PHONE', category: 'Communication Endpoint', confidence: 1.0, caseId: defaultCaseId },
+        { id: 'ent-3', label: 'HDFC-9842', type: 'BANK_ACCOUNT', category: 'Financial Ledger Account', confidence: 0.94, caseId: defaultCaseId },
+        { id: 'ent-4', label: 'Vikram Malhotra', type: 'PERSON', category: 'Person of Interest', confidence: 0.92, caseId: defaultCaseId },
+        { id: 'ent-5', label: '192.168.42.1', type: 'DEVICE_IDENTIFIER', category: 'Device Hardware / IP', confidence: 0.89, caseId: defaultCaseId },
+      ];
+      const fallbackEdges = [
+        { id: 'rel-1', source: 'ent-1', target: 'ent-2', type: 'USED_PHONE', label: 'Used Phone', confidence: 0.96 },
+        { id: 'rel-2', source: 'ent-1', target: 'ent-3', type: 'TRANSFERRED_FUNDS', label: 'Transferred Funds', confidence: 0.95 },
+        { id: 'rel-3', source: 'ent-2', target: 'ent-4', type: 'COMMUNICATED_WITH', label: 'Communicated With', confidence: 0.91 },
+        { id: 'rel-4', source: 'ent-3', target: 'ent-5', type: 'ASSOCIATED_WITH', label: 'Associated With', confidence: 0.88 },
+      ];
+      setNodes(fallbackNodes);
+      setEdges(fallbackEdges);
+      setStats({ totalNodes: 5, totalEdges: 4, density: 0.4 });
+      setSelectedNode(fallbackNodes[0]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGraphData();
+  }, []);
+
+  const handleTriggerSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch(`/api/graph/sync/case/${defaultCaseId}`, { method: 'POST' });
+      if (res.ok) {
+        await fetchGraphData();
+      }
+    } catch (err) {
+      // ignore
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.2, 2));
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.2, 0.6));
   const handleResetZoom = () => setZoomLevel(1);
+
+  // Position calculation for dynamic graph SVG rendering
+  const getNodePosition = (index: number, total: number) => {
+    if (total === 0) return { x: 400, y: 200 };
+    const radius = 140;
+    const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+    return {
+      x: Math.round(400 + radius * Math.cos(angle)),
+      y: Math.round(200 + radius * Math.sin(angle)),
+    };
+  };
+
+  const nodePositions: Record<string, { x: number; y: number }> = {};
+  nodes.forEach((n, idx) => {
+    nodePositions[n.id] = getNodePosition(idx, nodes.length);
+  });
+
+  const getNodeColor = (type: string) => {
+    switch (type) {
+      case 'PERSON': return '#1a2744';
+      case 'PHONE': case 'EMAIL': return '#2563eb';
+      case 'BANK_ACCOUNT': return '#16a34a';
+      case 'LOCATION': return '#d97706';
+      default: return '#dc2626';
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto flex flex-col min-h-[calc(100vh-140px)]">
@@ -17,14 +128,21 @@ export default function NetworkAnalysisPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 sm:gap-4 shrink-0">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">Network Link Analysis</h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">Interactive graph visualization of interconnected suspect nodes, communications, and money trails.</p>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">Interactive graph visualization of interconnected investigation nodes, communications, and financial trails.</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
-          <button className="btn-secondary text-xs px-3.5 py-2 rounded-lg flex-1 sm:flex-none justify-center">
-            Export JSON
+          <button
+            onClick={handleTriggerSync}
+            disabled={syncing}
+            className="btn-secondary text-xs px-3.5 py-2 rounded-lg flex-1 sm:flex-none justify-center"
+          >
+            {syncing ? 'Syncing Graph…' : 'Sync Graph Data'}
           </button>
-          <button className="btn-primary text-xs px-4 py-2 rounded-lg flex-1 sm:flex-none justify-center">
-            Run Centrality Check
+          <button
+            onClick={fetchGraphData}
+            className="btn-primary text-xs px-4 py-2 rounded-lg flex-1 sm:flex-none justify-center"
+          >
+            Refresh Network
           </button>
         </div>
       </div>
@@ -63,59 +181,87 @@ export default function NetworkAnalysisPage() {
             </button>
           </div>
 
-          {/* Interactive SVG Network Graph */}
-          <div
-            className="w-full h-full flex items-center justify-center transition-transform duration-200 touch-scroll"
-            style={{ transform: `scale(${zoomLevel})` }}
-          >
-            <svg className="w-full h-full max-w-2xl max-h-[400px] relative z-10 p-4" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
-              {/* Connection lines */}
-              <line x1="200" y1="200" x2="400" y2="100" stroke="#2563eb" strokeWidth="2" strokeDasharray="5,5" />
-              <line x1="200" y1="200" x2="400" y2="300" stroke="#0284c7" strokeWidth="1.5" />
-              <line x1="400" y1="100" x2="600" y2="150" stroke="#0284c7" strokeWidth="2.5" />
-              <line x1="400" y1="300" x2="600" y2="250" stroke="#dc2626" strokeWidth="1.5" strokeDasharray="3,3" />
-              <line x1="600" y1="150" x2="600" y2="250" stroke="#16a34a" strokeWidth="2" />
-              
-              {/* Suspect Node 1 */}
-              <g className="cursor-pointer" onClick={() => setSelectedNode('Rohan Sharma')}>
-                <circle cx="200" cy="200" r="28" fill="#1a2744" stroke="#ffffff" strokeWidth="3" />
-                <text x="200" y="245" fill="#18181b" fontSize="12" textAnchor="middle" fontWeight="bold">Rohan Sharma</text>
-                <text x="200" y="260" fill="#52525b" fontSize="10" textAnchor="middle">(Suspect Target)</text>
-              </g>
-              
-              {/* Phone Node */}
-              <g className="cursor-pointer" onClick={() => setSelectedNode('+91 98765 43210')}>
-                <circle cx="400" cy="100" r="24" fill="#2563eb" stroke="#ffffff" strokeWidth="3" />
-                <text x="400" y="142" fill="#18181b" fontSize="11" textAnchor="middle" fontWeight="bold">+91 98765...</text>
-              </g>
-              
-              {/* Bank Account Node */}
-              <g className="cursor-pointer" onClick={() => setSelectedNode('HDFC-9842')}>
-                <circle cx="400" cy="300" r="24" fill="#16a34a" stroke="#ffffff" strokeWidth="3" />
-                <text x="400" y="342" fill="#18181b" fontSize="11" textAnchor="middle" fontWeight="bold">HDFC-9842</text>
-              </g>
-              
-              {/* Suspect Node 2 */}
-              <g className="cursor-pointer" onClick={() => setSelectedNode('Vikram Malhotra')}>
-                <circle cx="600" cy="150" r="28" fill="#1a2744" stroke="#ffffff" strokeWidth="3" />
-                <text x="600" y="195" fill="#18181b" fontSize="12" textAnchor="middle" fontWeight="bold">Vikram Malhotra</text>
-              </g>
-              
-              {/* IP Threat Node */}
-              <g className="cursor-pointer" onClick={() => setSelectedNode('192.168.42.1')}>
-                <circle cx="600" cy="250" r="24" fill="#dc2626" stroke="#ffffff" strokeWidth="3" />
-                <text x="600" y="292" fill="#18181b" fontSize="11" textAnchor="middle" fontWeight="bold">192.168.42.1</text>
-              </g>
-            </svg>
-          </div>
+          {loading ? (
+            <div className="flex flex-col items-center gap-2">
+              <svg className="animate-spin h-7 w-7 text-[var(--accent-color)]" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-xs text-[var(--text-secondary)] font-medium">Querying Neo4j Graph Engine…</span>
+            </div>
+          ) : (
+            /* Interactive SVG Network Graph */
+            <div
+              className="w-full h-full flex items-center justify-center transition-transform duration-200 touch-scroll"
+              style={{ transform: `scale(${zoomLevel})` }}
+            >
+              <svg className="w-full h-full max-w-2xl max-h-[400px] relative z-10 p-4" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
+                {/* Edge Connection Lines */}
+                {edges.map((e) => {
+                  const sPos = nodePositions[e.source];
+                  const tPos = nodePositions[e.target];
+                  if (!sPos || !tPos) return null;
+
+                  return (
+                    <g key={e.id}>
+                      <line
+                        x1={sPos.x}
+                        y1={sPos.y}
+                        x2={tPos.x}
+                        y2={tPos.y}
+                        stroke={e.type === 'TRANSFERRED_FUNDS' ? '#16a34a' : '#2563eb'}
+                        strokeWidth="2"
+                        strokeDasharray={e.type === 'USED_PHONE' ? '5,5' : 'none'}
+                      />
+                    </g>
+                  );
+                })}
+
+                {/* Interactive Entity Nodes */}
+                {nodes.map((n) => {
+                  const pos = nodePositions[n.id];
+                  if (!pos) return null;
+                  const isSelected = selectedNode?.id === n.id;
+                  const nodeColor = getNodeColor(n.type);
+
+                  return (
+                    <g
+                      key={n.id}
+                      className="cursor-pointer transition-transform hover:scale-110"
+                      onClick={() => setSelectedNode(n)}
+                    >
+                      <circle
+                        cx={pos.x}
+                        cy={pos.y}
+                        r={isSelected ? "30" : "25"}
+                        fill={nodeColor}
+                        stroke="#ffffff"
+                        strokeWidth={isSelected ? "4" : "2"}
+                      />
+                      <text
+                        x={pos.x}
+                        y={pos.y + 42}
+                        fill="#18181b"
+                        fontSize="11"
+                        textAnchor="middle"
+                        fontWeight={isSelected ? "bold" : "normal"}
+                      >
+                        {n.label.length > 16 ? `${n.label.slice(0, 14)}…` : n.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          )}
           
           {/* Graph Legend Overlay */}
           <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-xs border border-[var(--card-border)] rounded-xl p-3 sm:p-4 text-xs space-y-1.5 shadow-sm z-20">
             <p className="font-bold text-[var(--text-primary)] mb-1">Graph Legend</p>
-            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-color)]"></span> Suspect Person</div>
-            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Communication Node</div>
-            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Ledger Account</div>
-            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-red-600"></span> Threat Indicator</div>
+            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-color)]"></span> Person of Interest</div>
+            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Communication Endpoint</div>
+            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span> Financial Ledger Account</div>
+            <div className="flex items-center gap-2 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span> Geographical Site</div>
           </div>
         </div>
 
@@ -129,25 +275,46 @@ export default function NetworkAnalysisPage() {
           </div>
 
           <div className="space-y-3.5 text-xs">
+            {stats && (
+              <div className="grid grid-cols-3 gap-2 p-3 bg-[var(--surface-muted)] border border-[var(--border-subtle)] rounded-lg text-center">
+                <div>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold">Nodes</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{stats.totalNodes}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold">Edges</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{stats.totalEdges}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold">Density</p>
+                  <p className="text-sm font-bold text-[var(--text-primary)]">{stats.density}</p>
+                </div>
+              </div>
+            )}
+
+            {selectedNode ? (
+              <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-lg space-y-2">
+                <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider">Target Node Profile</span>
+                <div>
+                  <p className="text-[var(--text-primary)] font-bold text-sm">{selectedNode.label}</p>
+                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">{selectedNode.category}</p>
+                </div>
+                <div className="pt-2 border-t border-blue-200/60 flex justify-between text-[11px]">
+                  <span className="text-[var(--text-tertiary)]">Type: <strong className="text-[var(--text-primary)]">{selectedNode.type}</strong></span>
+                  <span className="text-[var(--text-tertiary)]">Confidence: <strong className="text-[var(--text-primary)]">{(selectedNode.confidence * 100).toFixed(0)}%</strong></span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 bg-[var(--surface-muted)] border border-[var(--border-subtle)] rounded-lg text-center text-[var(--text-secondary)]">
+                Click any node on the graph canvas to inspect properties.
+              </div>
+            )}
+
             <div className="p-3.5 bg-[var(--surface-muted)] border border-[var(--border-subtle)] rounded-lg space-y-1">
               <span className="text-[10px] text-[var(--text-tertiary)] font-semibold uppercase">Highest Degree Centrality</span>
               <p className="text-[var(--text-primary)] font-bold text-sm">Rohan Sharma (Degree: 5)</p>
-              <p className="text-[var(--text-secondary)] leading-relaxed mt-0.5">Controls primary suspect device pool and coordinates money transfer operations.</p>
+              <p className="text-[var(--text-secondary)] leading-relaxed mt-0.5">Primary communication target connected to device pool and bank transfers.</p>
             </div>
-
-            <div className="p-3.5 bg-[var(--surface-muted)] border border-[var(--border-subtle)] rounded-lg space-y-1">
-              <span className="text-[10px] text-[var(--text-tertiary)] font-semibold uppercase">Betweenness Centrality</span>
-              <p className="text-[var(--text-primary)] font-bold text-sm">HDFC-9842 (Bridge Node)</p>
-              <p className="text-[var(--text-secondary)] leading-relaxed mt-0.5">Connects primary suspect network to multiple remote bank transfers.</p>
-            </div>
-
-            {selectedNode && (
-              <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-lg space-y-1">
-                <span className="text-[10px] text-blue-700 font-bold uppercase">Selected Node Details</span>
-                <p className="text-[var(--text-primary)] font-bold text-xs">{selectedNode}</p>
-                <p className="text-[var(--text-secondary)]">Associated with 3 active investigation cases.</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
