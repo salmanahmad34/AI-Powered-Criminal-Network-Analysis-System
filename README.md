@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CrimeGraph AI — AI-Powered Criminal Network Analysis System
 
 CrimeGraph AI is an **educational and hackathon prototype** designed for structured entity extraction, relationship mapping, and link analysis across synthetic investigation data.
@@ -78,3 +79,6 @@ Visit `http://localhost:3000` in your browser.
 ## 📄 License & Compliance
 
 Educational & Prototype Use Only. All data included in demo files is entirely synthetic.
+=======
+# AI-Powered-Criminal-Network-Analysis-System
+>>>>>>> 1b5944c77c3d9d31ca8dec00595192fd92b8ea6c
