@@ -1,0 +1,595 @@
+// CRIMEGRAPH AI — PostgreSQL Schema
+// All data is synthetic/demo only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  INVESTIGATOR
+  SENIOR_OFFICER
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+enum CaseType {
+  CYBER_CRIME
+  FINANCIAL_FRAUD
+  ONLINE_FRAUD
+  IDENTITY_FRAUD
+  OTHER
+}
+
+enum CasePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CaseStatus {
+  DRAFT
+  OPEN
+  ACTIVE
+  UNDER_REVIEW
+  CLOSED
+  ARCHIVED
+}
+
+enum FileType {
+  PDF
+  CSV
+  XLSX
+  JSON
+  TXT
+}
+
+enum DataCategory {
+  FIR_REPORT
+  CDR
+  TRANSACTION
+  VEHICLE
+  LOCATION
+  CASE_HISTORY
+  INTELLIGENCE_REPORT
+  OTHER
+}
+
+enum ProcessingStatus {
+  PENDING
+  VALIDATING
+  PARSING
+  EXTRACTING_ENTITIES
+  EXTRACTING_RELATIONSHIPS
+  RESOLVING_ENTITIES
+  UPDATING_GRAPH
+  GENERATING_ALERTS
+  COMPLETED
+  FAILED
+}
+
+enum ValidationStatus {
+  PENDING
+  VALID
+  INVALID
+  WARNING
+}
+
+enum EntityType {
+  PERSON
+  PHONE
+  EMAIL
+  LOCATION
+  VEHICLE
+  ORGANIZATION
+  BANK_ACCOUNT
+  PAYMENT_ID
+  WEBSITE
+  CASE
+  DOCUMENT
+  DEVICE_IDENTIFIER
+  DATE
+  AMOUNT
+}
+
+enum RelationshipType {
+  CALLED
+  CONTACTED
+  USED
+  SENT_MONEY
+  RECEIVED_MONEY
+  VISITED
+  OWNED
+  ASSOCIATED_WITH
+  WORKED_AT
+  MENTIONED_IN
+  APPEARED_IN
+  LINKED_TO
+  SHARED_IDENTIFIER
+}
+
+enum IdentifierType {
+  PHONE
+  EMAIL
+  AADHAAR_MASKED
+  PAN_MASKED
+  VEHICLE_PLATE
+  BANK_ACCOUNT
+  PAYMENT_ID
+  DEVICE_ID
+  IP_ADDRESS
+}
+
+enum MatchStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum AlertType {
+  DUPLICATE_IDENTITY
+  SHARED_IDENTIFIER
+  UNUSUAL_TRANSACTION
+  HIGH_COMMUNICATION
+  CROSS_CASE_LINK
+  NETWORK_BRIDGE
+  DATA_CONFLICT
+  INTEGRITY_MISMATCH
+}
+
+enum AlertStatus {
+  NEW
+  UNDER_REVIEW
+  CONFIRMED
+  DISMISSED
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  CASE_CREATED
+  CASE_VIEWED
+  CASE_UPDATED
+  CASE_ASSIGNED
+  FILE_UPLOAD_STARTED
+  FILE_UPLOADED
+  FILE_VALIDATED
+  FILE_REJECTED
+  PROCESSING_JOB_CREATED
+  PROCESSING_JOB_STARTED
+  PROCESSING_JOB_COMPLETED
+  PROCESSING_JOB_FAILED
+  ENTITY_CONFIRMED
+  ENTITY_REJECTED
+  ENTITY_MERGED
+  ALERT_REVIEWED
+  REPORT_GENERATED
+  DOCUMENT_VIEWED
+  SETTINGS_CHANGED
+  USER_CREATED
+  USER_UPDATED
+  USER_DEACTIVATED
+  DEMO_SEED
+  DEMO_RESET
+}
+
+// ─── Models ───────────────────────────────────────────────
+
+model User {
+  id                String     @id @default(uuid())
+  email             String     @unique
+  passwordHash      String     @map("password_hash")
+  role              UserRole
+  status            UserStatus @default(ACTIVE)
+  fullName          String     @map("full_name")
+  lastLogin         DateTime?  @map("last_login")
+  failedLoginCount  Int        @default(0) @map("failed_login_count")
+  lockedUntil       DateTime?  @map("locked_until")
+  mfaEnabled        Boolean    @default(false) @map("mfa_enabled")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  caseAssignments   CaseAssignment[]
+  uploadedDocuments Document[]
+  auditLogs         AuditLog[]
+  caseNotes         CaseNote[]
+  createdCases      Case[]            @relation("CaseCreator")
+  assignedCases     Case[]            @relation("AssignedInvestigator")
+  assignedBy        CaseAssignment[]  @relation("AssignedBy")
+  reviewedMatches   MatchCandidate[]
+  reviewedAlerts    Alert[]
+  generatedReports  Report[]
+  startedJobs       ProcessingJob[]
+  settingsUpdated   SystemSetting[]
+
+  @@map("users")
+}
+
+model Case {
+  id            String       @id @default(uuid())
+  caseNumber    String       @unique @map("case_number")
+  title         String
+  caseType      CaseType     @map("case_type")
+  description   String?
+  incidentDate  DateTime?    @map("incident_date")
+  location      String?
+  priority      CasePriority @default(MEDIUM)
+  status        CaseStatus   @default(OPEN)
+  createdById   String       @map("created_by_id")
+  assignedInvestigatorId String? @map("assigned_investigator_id")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy     User             @relation("CaseCreator", fields: [createdById], references: [id])
+  assignedInvestigator User?     @relation("AssignedInvestigator", fields: [assignedInvestigatorId], references: [id])
+  assignments   CaseAssignment[]
+  documents     Document[]
+  processingJobs ProcessingJob[]
+  entities      Entity[]
+  alerts        Alert[]
+  notes         CaseNote[]
+  reports       Report[]
+
+  @@map("cases")
+}
+
+model CaseAssignment {
+  id         String   @id @default(uuid())
+  caseId     String   @map("case_id")
+  userId     String   @map("user_id")
+  role       String   @default("investigator")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedById String @map("assigned_by_id")
+
+  // Relations
+  case       Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user       User @relation(fields: [userId], references: [id])
+  assignedBy User @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  @@unique([caseId, userId])
+  @@map("case_assignments")
+}
+
+model Document {
+  id               String           @id @default(uuid())
+  caseId           String           @map("case_id")
+  originalFilename String           @map("original_filename")
+  storedFilename   String           @map("stored_filename")
+  filePath         String           @map("file_path")
+  fileType         FileType         @map("file_type")
+  dataCategory     DataCategory     @map("data_category")
+  fileSize         BigInt           @map("file_size")
+  sha256Hash       String           @map("sha256_hash")
+  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
+  validationStatus ValidationStatus @default(PENDING) @map("validation_status")
+  validationErrors Json?            @map("validation_errors")
+  uploadedById     String           @map("uploaded_by_id")
+  uploadedAt       DateTime         @default(now()) @map("uploaded_at")
+
+  // Relations
+  case              Case                    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  uploadedBy        User                    @relation(fields: [uploadedById], references: [id])
+  extractedEntities ExtractedEntity[]
+  extractedRelations ExtractedRelationship[]
+  entities          Entity[]
+  entityAliases     EntityAlias[]
+  entityIdentifiers EntityIdentifier[]
+  alertEvidence     AlertEvidence[]
+
+  @@map("documents")
+}
+
+model ProcessingJob {
+  id                 String           @id @default(uuid())
+  caseId             String           @map("case_id")
+  status             ProcessingStatus @default(PENDING)
+  totalFiles         Int              @default(0) @map("total_files")
+  processedFiles     Int              @default(0) @map("processed_files")
+  totalRecords       Int              @default(0) @map("total_records")
+  entitiesFound      Int              @default(0) @map("entities_found")
+  relationshipsFound Int              @default(0) @map("relationships_found")
+  matchesFound       Int              @default(0) @map("matches_found")
+  errors             Int              @default(0)
+  progress           Float            @default(0)
+  errorLog           Json?            @map("error_log")
+  startedAt          DateTime?        @map("started_at")
+  completedAt        DateTime?        @map("completed_at")
+  startedById        String           @map("started_by_id")
+
+  // Relations
+  case       Case             @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  startedBy  User             @relation(fields: [startedById], references: [id])
+  steps      ProcessingStep[]
+
+  @@map("processing_jobs")
+}
+
+model ProcessingStep {
+  id          String           @id @default(uuid())
+  jobId       String           @map("job_id")
+  stepName    String           @map("step_name")
+  status      ProcessingStatus @default(PENDING)
+  details     String?
+  startedAt   DateTime?        @map("started_at")
+  completedAt DateTime?        @map("completed_at")
+
+  // Relations
+  job ProcessingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("processing_steps")
+}
+
+model Entity {
+  id               String     @id @default(uuid())
+  caseId           String     @map("case_id")
+  entityType       EntityType @map("entity_type")
+  primaryName      String     @map("primary_name")
+  attributes       Json?
+  confidence       Float      @default(1.0)
+  sourceDocumentId String?    @map("source_document_id")
+  isResolved       Boolean    @default(false) @map("is_resolved")
+  neoNodeId        String?    @map("neo_node_id")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  case           Case               @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  sourceDocument Document?          @relation(fields: [sourceDocumentId], references: [id])
+  aliases        EntityAlias[]
+  identifiers    EntityIdentifier[]
+  matchesAsA     MatchCandidate[]   @relation("MatchEntityA")
+  matchesAsB     MatchCandidate[]   @relation("MatchEntityB")
+  extractedFrom  ExtractedEntity[]
+  sourceRelationsFrom ExtractedRelationship[] @relation("RelSource")
+  sourceRelationsTo   ExtractedRelationship[] @relation("RelTarget")
+
+  @@map("entities")
+}
+
+model EntityAlias {
+  id               String  @id @default(uuid())
+  entityId         String  @map("entity_id")
+  aliasName        String  @map("alias_name")
+  sourceDocumentId String? @map("source_document_id")
+
+  // Relations
+  entity         Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  sourceDocument Document? @relation(fields: [sourceDocumentId], references: [id])
+
+  @@map("entity_aliases")
+}
+
+model EntityIdentifier {
+  id               String         @id @default(uuid())
+  entityId         String         @map("entity_id")
+  identifierType   IdentifierType @map("identifier_type")
+  identifierValue  String         @map("identifier_value")
+  sourceDocumentId String?        @map("source_document_id")
+
+  // Relations
+  entity         Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  sourceDocument Document? @relation(fields: [sourceDocumentId], references: [id])
+
+  @@index([identifierType, identifierValue])
+  @@map("entity_identifiers")
+}
+
+model ExtractedEntity {
+  id           String     @id @default(uuid())
+  documentId   String     @map("document_id")
+  entityType   EntityType @map("entity_type")
+  value        String
+  context      Json?
+  confidence   Float      @default(1.0)
+  startOffset  Int?       @map("start_offset")
+  endOffset    Int?       @map("end_offset")
+  entityId     String?    @map("entity_id")
+
+  // Relations
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  entity   Entity?  @relation(fields: [entityId], references: [id])
+
+  @@map("extracted_entities")
+}
+
+model ExtractedRelationship {
+  id               String           @id @default(uuid())
+  documentId       String           @map("document_id")
+  sourceEntityId   String?          @map("source_entity_id")
+  targetEntityId   String?          @map("target_entity_id")
+  relationshipType RelationshipType @map("relationship_type")
+  confidence       Float            @default(1.0)
+  explanation      String?
+  timestamp        DateTime?
+
+  // Relations
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sourceEntity Entity?  @relation("RelSource", fields: [sourceEntityId], references: [id])
+  targetEntity Entity?  @relation("RelTarget", fields: [targetEntityId], references: [id])
+
+  @@map("extracted_relationships")
+}
+
+model MatchCandidate {
+  id          String      @id @default(uuid())
+  entityAId   String      @map("entity_a_id")
+  entityBId   String      @map("entity_b_id")
+  confidence  Float
+  evidence    Json
+  status      MatchStatus @default(PENDING)
+  reviewedById String?    @map("reviewed_by_id")
+  reviewedAt  DateTime?   @map("reviewed_at")
+  reviewNotes String?     @map("review_notes")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  entityA    Entity @relation("MatchEntityA", fields: [entityAId], references: [id], onDelete: Cascade)
+  entityB    Entity @relation("MatchEntityB", fields: [entityBId], references: [id], onDelete: Cascade)
+  reviewedBy User?  @relation(fields: [reviewedById], references: [id])
+
+  @@unique([entityAId, entityBId])
+  @@map("match_candidates")
+}
+
+model Alert {
+  id           String      @id @default(uuid())
+  caseId       String?     @map("case_id")
+  alertType    AlertType   @map("alert_type")
+  title        String
+  reason       String
+  evidence     Json
+  sourceRecords Json       @map("source_records")
+  confidence   Float
+  status       AlertStatus @default(NEW)
+  reviewedById String?     @map("reviewed_by_id")
+  reviewedAt   DateTime?   @map("reviewed_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  case         Case?          @relation(fields: [caseId], references: [id])
+  reviewedBy   User?          @relation(fields: [reviewedById], references: [id])
+  alertEvidence AlertEvidence[]
+
+  @@map("alerts")
+}
+
+model AlertEvidence {
+  id         String @id @default(uuid())
+  alertId    String @map("alert_id")
+  documentId String @map("document_id")
+  excerpt    String?
+  reference  String?
+
+  // Relations
+  alert    Alert    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@map("alert_evidence")
+}
+
+model CaseNote {
+  id        String   @id @default(uuid())
+  caseId    String   @map("case_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  case   Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@map("case_notes")
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  caseId        String   @map("case_id")
+  title         String
+  sections      Json
+  generatedById String   @map("generated_by_id")
+  generatedAt   DateTime @default(now()) @map("generated_at")
+  filePath      String?  @map("file_path")
+
+  // Relations
+  case        Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  generatedBy User @relation(fields: [generatedById], references: [id])
+
+  @@map("reports")
+}
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  userId       String?     @map("user_id")
+  action       AuditAction
+  resourceType String?     @map("resource_type")
+  resourceId   String?     @map("resource_id")
+  details      Json?
+  ipAddress    String?     @map("ip_address")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model SystemSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedById String? @map("updated_by_id")
+
+  // Relations
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+
+  @@map("system_settings")
+}
+
+model AIProvider {
+  id            String   @id @default(uuid())
+  providerId    String   @unique @map("provider_id")
+  providerName  String   @map("provider_name")
+  enabled       Boolean  @default(true)
+  priority      Int      @default(1)
+  model         String
+  timeout       Int      @default(30000)
+  maxRetries    Int      @default(2) @map("max_retries")
+  cooldown      Int      @default(60)
+  healthStatus  String   @default("HEALTHY") @map("health_status")
+  cooldownUntil DateTime? @map("cooldown_until")
+  lastSuccess   DateTime? @map("last_success")
+  lastFailure   DateTime? @map("last_failure")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_providers")
+}
+
+model AIRequest {
+  id            String   @id @default(uuid())
+  requestId     String   @unique @map("request_id")
+  providerId    String   @map("provider_id")
+  model         String
+  startTime     DateTime @map("start_time")
+  duration      Int
+  success       Boolean
+  errorClass    String?  @map("error_class")
+  fallbackUsed  Boolean  @default(false) @map("fallback_used")
+  finalProvider String?  @map("final_provider")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("ai_requests")
+}
+
+model AIUsage {
+  id            String   @id @default(uuid())
+  requestId     String   @map("request_id")
+  inputTokens   Int?     @map("input_tokens")
+  outputTokens  Int?     @map("output_tokens")
+  estimatedCost Float?   @map("estimated_cost")
+  providerId    String   @map("provider_id")
+  model         String
+  timestamp     DateTime @default(now())
+
+  @@map("ai_usages")
+}

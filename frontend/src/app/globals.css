@@ -1,0 +1,327 @@
+@import "tailwindcss";
+
+/* ============================================================
+   CRIMEGRAPH AI — DESIGN TOKEN SYSTEM
+   Light, clean, premium SaaS/intelligence platform palette
+   ============================================================ */
+
+:root {
+  /* Background & Surface */
+  --background: #f7f7f6;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f2;
+
+  /* Card */
+  --card-bg: #ffffff;
+  --card-border: #e5e5e3;
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e5e5e3;
+
+  /* Typography */
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #a1a1aa;
+  --foreground: #18181b;
+
+  /* Borders */
+  --border: #e5e5e3;
+  --border-subtle: #f0f0ee;
+
+  /* Accent — dark navy/blue */
+  --accent-color: #1a2744;
+  --accent-hover: #243358;
+  --accent-muted: #e8eaf2;
+
+  /* Secondary accent — restrained blue */
+  --teal-accent: #2563eb;
+  --teal-hover: #1d4ed8;
+  --teal-muted: #eff6ff;
+
+  /* Status colors — light mode */
+  --status-critical-bg: #fef2f2;
+  --status-critical-border: #fecaca;
+  --status-critical-text: #b91c1c;
+
+  --status-high-bg: #fffbeb;
+  --status-high-border: #fde68a;
+  --status-high-text: #92400e;
+
+  --status-medium-bg: #eff6ff;
+  --status-medium-border: #bfdbfe;
+  --status-medium-text: #1d4ed8;
+
+  --status-low-bg: #f4f4f2;
+  --status-low-border: #e5e5e3;
+  --status-low-text: #52525b;
+
+  --status-success-bg: #f0fdf4;
+  --status-success-border: #bbf7d0;
+  --status-success-text: #15803d;
+
+  /* Danger */
+  --danger-color: #dc2626;
+  --danger-hover: #b91c1c;
+  --danger-muted: #fef2f2;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-border: var(--card-border);
+  --color-accent: var(--accent-color);
+  --color-accent-hover: var(--accent-hover);
+  --color-teal: var(--teal-accent);
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   CUSTOM SCROLLBARS
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* ============================================================
+   CARD UTILITY
+   ============================================================ */
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Keep glass-panel as alias for backward compatibility */
+.glass-panel {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+/* ============================================================
+   BUTTON UTILITIES
+   ============================================================ */
+
+.btn-primary {
+  background-color: var(--accent-color);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+  background-color: var(--surface-muted);
+}
+
+/* ============================================================
+   BADGE UTILITIES
+   ============================================================ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.badge-critical {
+  background-color: var(--status-critical-bg);
+  border-color: var(--status-critical-border);
+  color: var(--status-critical-text);
+}
+
+.badge-high {
+  background-color: var(--status-high-bg);
+  border-color: var(--status-high-border);
+  color: var(--status-high-text);
+}
+
+.badge-medium {
+  background-color: var(--status-medium-bg);
+  border-color: var(--status-medium-border);
+  color: var(--status-medium-text);
+}
+
+.badge-low {
+  background-color: var(--status-low-bg);
+  border-color: var(--status-low-border);
+  color: var(--status-low-text);
+}
+
+.badge-success {
+  background-color: var(--status-success-bg);
+  border-color: var(--status-success-border);
+  color: var(--status-success-text);
+}
+
+/* ============================================================
+   TABLE UTILITIES
+   ============================================================ */
+
+.data-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+
+.data-table thead tr {
+  border-bottom: 1px solid var(--card-border);
+  background-color: var(--surface-muted);
+}
+
+.data-table thead th {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.1s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--surface-muted);
+}
+
+.data-table tbody td {
+  padding: 0.875rem 1.5rem;
+  font-size: 0.75rem;
+}
+
+/* ============================================================
+   FORM UTILITIES
+   ============================================================ */
+
+.form-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background-color: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.813rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.form-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-input:focus {
+  border-color: var(--teal-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.form-select {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background-color: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.813rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.form-select:focus {
+  border-color: var(--teal-accent);
+}
+
+/* ============================================================
+   ANIMATION UTILITIES
+   ============================================================ */
+
+.pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================================
+   DRAG & DROP UPLOAD ZONE
+   ============================================================ */
+
+.upload-zone {
+  border: 2px dashed var(--card-border);
+  border-radius: 12px;
+  background-color: #ffffff;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.upload-zone.drag-active {
+  border-color: var(--teal-accent);
+  background-color: var(--teal-muted);
+}

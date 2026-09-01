@@ -1,0 +1,4 @@
+source_id,target_id,timestamp,duration,metadata
++91 98765 43210,+91 98765 43211,2026-08-30T10:15:00Z,120,Mumbai Cell Tower 4
++91 98765 43211,+91 98765 43212,2026-08-30T10:17:30Z,45,Mumbai Cell Tower 2
++91 98765 43210,+91 98765 43212,2026-08-30T10:20:00Z,310,New Delhi Hub

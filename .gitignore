@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment Files — NEVER COMMIT SECRETS
+.env
+.env.*
+!.env.example
+
+# Build Artifacts
+.next/
+dist/
+build/
+out/
+
+# Uploads & Temporary Data
+backend/uploads/*
+!backend/uploads/.gitkeep
+scratch/
+tmp/
+temp/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database Data Directories & Local DBs
+*.db
+*.sqlite
+postgres_data/
+neo4j_data/
+redis_data/
+
+# Testing & Coverage
+coverage/
+.nyc_output/

@@ -1,0 +1,10 @@
+FIRST INFORMATION REPORT (FIR) - SYNTHETIC REPORT
+Record ID: FIR-2026-08394
+Date: 2026-08-30 08:30 IST
+Location: Sector-12 Cyber Cell, New Delhi
+
+The complainant states that on 2026-08-29, several unauthorized ledger transactions were recorded from target account 5010048123984 to remote merchant terminals. Initial intelligence points to device connections stemming from cell tower node Mumbai Tower 4, matching suspect phone line +91 98765 43210. 
+
+Lead Investigator: investigator@crimegraph.demo
+Case Reference: CASE-2026-001
+Status: ACTIVE
