@@ -52,10 +52,10 @@ export default function ProcessingMonitorPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Processing Monitor</h1>
-        <p className="text-sm text-[var(--text-secondary)] mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">Processing Monitor</h1>
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
           Monitor background validation, registration, and AI parsing queues.
         </p>
       </div>
@@ -78,18 +78,18 @@ export default function ProcessingMonitorPage() {
           <p className="text-xs text-[var(--text-secondary)] mt-1">Upload synthetic datasets via a case Data Center tab to start.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5">
           {jobs.map((job) => {
             const isCompleted = job.status === 'COMPLETED';
             return (
-              <div key={job.id} className="bg-white border border-[var(--card-border)] rounded-xl p-6 space-y-5">
+              <div key={job.id} className="bg-white border border-[var(--card-border)] rounded-xl p-4 sm:p-6 space-y-4 sm:space-y-5">
                 {/* Job header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-[var(--border-subtle)]">
-                  <div className="min-w-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-[var(--border-subtle)]">
+                  <div className="min-w-0 w-full sm:w-auto">
                     <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">Job ID</p>
-                    <p className="text-sm font-bold text-[var(--accent-color)] font-mono truncate mt-0.5">{job.id}</p>
+                    <p className="text-xs sm:text-sm font-bold text-[var(--accent-color)] font-mono truncate mt-0.5">{job.id}</p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-3 shrink-0">
                     <span className={`badge ${statusStyles[job.status] || 'bg-stone-50 border-stone-200 text-stone-600'} ${job.status === 'PROCESSING' ? 'animate-pulse' : ''}`}>
                       {job.status}
                     </span>
@@ -114,10 +114,10 @@ export default function ProcessingMonitorPage() {
                 </div>
 
                 {/* Stage Checklist */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-2">
                   {/* Phase 2 */}
-                  <div className="bg-[var(--surface-muted)] p-4 rounded-lg border border-[var(--border-subtle)]">
-                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-3">Phase 2 — Ingestion</p>
+                  <div className="bg-[var(--surface-muted)] p-3.5 sm:p-4 rounded-lg border border-[var(--border-subtle)]">
+                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2.5">Phase 2 — Ingestion</p>
                     <div className="space-y-2">
                       {[
                         { label: 'File Ingestion & Checksum', done: true },
@@ -133,8 +133,8 @@ export default function ProcessingMonitorPage() {
                   </div>
 
                   {/* Phase 3-4 */}
-                  <div className="bg-[var(--surface-muted)] p-4 rounded-lg border border-[var(--border-subtle)] opacity-50">
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Phase 3–4 — Analytics</p>
+                  <div className="bg-[var(--surface-muted)] p-3.5 sm:p-4 rounded-lg border border-[var(--border-subtle)] opacity-60">
+                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">Phase 3–4 — Analytics</p>
                     <div className="space-y-2">
                       {[
                         'AI Entity Extraction (P3)',
@@ -149,19 +149,19 @@ export default function ProcessingMonitorPage() {
                   </div>
 
                   {/* Phase 5 */}
-                  <div className="bg-[var(--surface-muted)] p-4 rounded-lg border border-[var(--border-subtle)] opacity-50">
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Phase 5 — Graph</p>
+                  <div className="bg-[var(--surface-muted)] p-3.5 sm:p-4 rounded-lg border border-[var(--border-subtle)] opacity-60 sm:col-span-2 md:col-span-1">
+                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">Phase 5 — Graph</p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-[var(--border)] shrink-0" />
-                        <span className="text-xs text-[var(--text-tertiary)]">Neo4j Graph Database Update</span>
+                        <span className="text-xs text-[var(--text-tertiary)]">Neo4j Graph DB Sync</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Footer */}
-                <div className="text-[10px] text-[var(--text-tertiary)] flex justify-between pt-1">
+                <div className="text-[10px] text-[var(--text-tertiary)] flex flex-col sm:flex-row justify-between gap-1 pt-1">
                   <span>Started by: {job.startedBy?.fullName || 'System'}</span>
                   <span>
                     {job.startedAt && `Triggered: ${new Date(job.startedAt).toLocaleString()}`}

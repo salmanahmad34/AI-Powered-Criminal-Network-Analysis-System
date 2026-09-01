@@ -9,13 +9,6 @@ interface User {
   role: string;
 }
 
-interface CaseAssignment {
-  user: {
-    id: string;
-    fullName: string;
-  };
-}
-
 interface Case {
   id: string;
   caseNumber: string;
@@ -62,12 +55,11 @@ export default function CasesPage() {
         const usersRes = await fetch('/api/admin/users');
         if (usersRes.ok) {
           const data = await usersRes.json();
-          // Filter only investigators, senior officers, and admins
           const invList = data.users.filter((u: User) => u.role !== 'VIEWER');
           setInvestigators(invList);
         }
       } catch (err) {
-        // Ignore initialization errors, main fetch will catch network failure
+        // Ignore initialization errors
       }
     }
     fetchInitData();
@@ -104,25 +96,25 @@ export default function CasesPage() {
   const canCreate = currentUser && currentUser.role !== 'VIEWER';
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 sm:gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Investigation Cases</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">Search, allocate, and correlate intelligence networks.</p>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">Search, allocate, and correlate intelligence networks.</p>
         </div>
         {canCreate && (
           <Link
             href="/cases/create"
             id="create-case-btn"
-            className="btn-primary text-xs px-5 py-2.5 rounded-lg shrink-0"
+            className="btn-primary text-xs w-full sm:w-auto px-5 py-2.5 rounded-lg shrink-0 justify-center"
           >
             + New Case
           </Link>
         )}
       </div>
 
-      {/* Filters Pane */}
-      <div className="bg-white border border-[var(--card-border)] rounded-xl p-5 grid grid-cols-1 md:grid-cols-5 gap-4">
+      {/* Responsive Filters Pane */}
+      <div className="bg-white border border-[var(--card-border)] rounded-xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
         <div>
           <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Search</label>
           <input
@@ -182,7 +174,7 @@ export default function CasesPage() {
           </select>
         </div>
 
-        <div>
+        <div className="sm:col-span-2 lg:col-span-1">
           <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Investigator</label>
           <select
             value={assignedInvestigatorId}
@@ -222,65 +214,118 @@ export default function CasesPage() {
           <p className="text-xs text-[var(--text-secondary)] mt-1">Try modifying your filter options or create a new case.</p>
         </div>
       ) : (
-        <div className="bg-white border border-[var(--card-border)] rounded-xl overflow-hidden">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Case ID</th>
-                <th>Title</th>
-                <th>Classification</th>
-                <th>Priority</th>
-                <th>Status</th>
-                <th>Investigator</th>
-                <th>Created</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {cases.map((c) => (
-                <tr key={c.id}>
-                  <td className="font-mono font-bold text-[var(--accent-color)] text-[11px]">{c.caseNumber}</td>
-                  <td className="font-semibold text-[var(--text-primary)]">{c.title}</td>
-                  <td className="text-[var(--text-secondary)]">{(c.caseType || '').replace(/_/g, ' ')}</td>
-                  <td>
-                    <span className={`badge ${
-                      c.priority === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
-                      c.priority === 'HIGH' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                      c.priority === 'MEDIUM' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                      'bg-stone-50 border-stone-200 text-stone-500'
-                    }`}>
-                      {c.priority}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="flex items-center gap-1.5 text-[var(--text-secondary)] text-xs">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        c.status === 'ACTIVE' || c.status === 'OPEN' ? 'bg-[var(--teal-accent)]' :
-                        c.status === 'UNDER_REVIEW' ? 'bg-amber-500 animate-pulse' :
-                        'bg-[var(--border)]'
-                      }`} />
-                      {(c.status || '').replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="font-medium text-[var(--text-primary)]">
-                    {c.assignedInvestigator?.fullName || <span className="text-[var(--text-tertiary)]">&mdash;</span>}
-                  </td>
-                  <td className="text-[var(--text-tertiary)]">
-                    {new Date(c.createdAt).toLocaleDateString()}
-                  </td>
-                  <td>
-                    <Link
-                      href={`/cases/${c.id}`}
-                      className="btn-secondary text-[11px] px-3 py-1.5 rounded-lg"
-                    >
-                      View
-                    </Link>
-                  </td>
+        <>
+          {/* Desktop & Tablet Table View */}
+          <div className="hidden sm:block table-container bg-white border border-[var(--card-border)] rounded-xl">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Case ID</th>
+                  <th>Title</th>
+                  <th>Classification</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Investigator</th>
+                  <th>Created</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {cases.map((c) => (
+                  <tr key={c.id}>
+                    <td className="font-mono font-bold text-[var(--accent-color)] text-[11px]">{c.caseNumber}</td>
+                    <td className="font-semibold text-[var(--text-primary)]">{c.title}</td>
+                    <td className="text-[var(--text-secondary)]">{(c.caseType || '').replace(/_/g, ' ')}</td>
+                    <td>
+                      <span className={`badge ${
+                        c.priority === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
+                        c.priority === 'HIGH' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                        c.priority === 'MEDIUM' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                        'bg-stone-50 border-stone-200 text-stone-500'
+                      }`}>
+                        {c.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="flex items-center gap-1.5 text-[var(--text-secondary)] text-xs">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                          c.status === 'ACTIVE' || c.status === 'OPEN' ? 'bg-[var(--teal-accent)]' :
+                          c.status === 'UNDER_REVIEW' ? 'bg-amber-500 animate-pulse' :
+                          'bg-[var(--border)]'
+                        }`} />
+                        {(c.status || '').replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="font-medium text-[var(--text-primary)]">
+                      {c.assignedInvestigator?.fullName || <span className="text-[var(--text-tertiary)]">&mdash;</span>}
+                    </td>
+                    <td className="text-[var(--text-tertiary)]">
+                      {new Date(c.createdAt).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <Link
+                        href={`/cases/${c.id}`}
+                        className="btn-secondary text-[11px] px-3 py-1.5 rounded-lg"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card Representation (< 640px) */}
+          <div className="sm:hidden space-y-3">
+            {cases.map((c) => (
+              <div key={c.id} className="bg-white border border-[var(--card-border)] rounded-xl p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-mono font-bold text-[var(--accent-color)] text-[11px] block">{c.caseNumber}</span>
+                    <h3 className="font-bold text-sm text-[var(--text-primary)] mt-0.5">{c.title}</h3>
+                  </div>
+                  <span className={`badge shrink-0 ${
+                    c.priority === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
+                    c.priority === 'HIGH' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                    c.priority === 'MEDIUM' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                    'bg-stone-50 border-stone-200 text-stone-500'
+                  }`}>
+                    {c.priority}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--border-subtle)]">
+                  <div>
+                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Type</span>
+                    <span className="text-[var(--text-secondary)]">{(c.caseType || '').replace(/_/g, ' ')}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Status</span>
+                    <span className="text-[var(--text-secondary)] font-medium">{(c.status || '').replace(/_/g, ' ')}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Investigator</span>
+                    <span className="text-[var(--text-primary)] font-medium truncate block">
+                      {c.assignedInvestigator?.fullName || 'Unassigned'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Created</span>
+                    <span className="text-[var(--text-tertiary)]">{new Date(c.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <Link
+                  href={`/cases/${c.id}`}
+                  className="btn-secondary w-full text-center text-xs py-2 rounded-lg justify-center mt-1"
+                >
+                  Open Case Details →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

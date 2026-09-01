@@ -334,7 +334,7 @@ export default function CaseDetailsPage({ params }: { params: { id: string } }) 
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-[var(--border)] overflow-x-auto">
+      <div className="flex border-b border-[var(--border)] overflow-x-auto scrollbar-none touch-scroll whitespace-nowrap gap-1 pb-px">
         {[
           { id: 'overview', name: 'Overview' },
           { id: 'datacenter', name: 'Data Center' },

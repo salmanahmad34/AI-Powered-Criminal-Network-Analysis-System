@@ -23,28 +23,28 @@ export default function EntitiesPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Entity Database</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">Search, update, and resolve extracted intelligence entities.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">Entity Database</h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">Search, update, and resolve extracted intelligence entities.</p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
           <input
             id="entities-search-input"
             type="text"
             placeholder="Search entity name, phone, account…"
-            className="form-input text-xs w-64"
+            className="form-input text-xs w-full sm:w-64"
           />
-          <button id="entities-search-btn" className="btn-primary text-xs px-4 py-2 rounded-lg whitespace-nowrap">
+          <button id="entities-search-btn" className="btn-primary text-xs px-4 py-2 rounded-lg whitespace-nowrap shrink-0">
             Search
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-[var(--card-border)] rounded-xl overflow-hidden">
+      {/* Desktop & Tablet Table View */}
+      <div className="hidden sm:block table-container bg-white border border-[var(--card-border)] rounded-xl">
         <table className="data-table">
           <thead>
             <tr>
@@ -84,6 +84,37 @@ export default function EntitiesPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card View (<640px) */}
+      <div className="sm:hidden space-y-3">
+        {entities.map((ent, i) => (
+          <div key={i} className="bg-white border border-[var(--card-border)] rounded-xl p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <span className={`badge ${typeStyles[ent.type] || 'bg-stone-50 border-stone-200 text-stone-600'} mb-1`}>
+                  {(ent.type || '').replace(/_/g, ' ')}
+                </span>
+                <p className="font-bold text-sm text-[var(--text-primary)] mt-1">{ent.name}</p>
+              </div>
+              <span className={`badge shrink-0 ${statusStyles[ent.status] || 'bg-stone-50 border-stone-200 text-stone-500'}`}>
+                {(ent.status || '').replace(/_/g, ' ')}
+              </span>
+            </div>
+
+            <p className="text-xs text-[var(--text-secondary)]">{ent.details}</p>
+
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)] text-xs">
+              <span className="text-[var(--text-tertiary)]">Confidence: <strong className="text-[var(--text-primary)]">{ent.confidence}</strong></span>
+              <button
+                id={`entity-audit-btn-mobile-${i}`}
+                className="text-xs font-semibold text-[var(--teal-accent)] hover:underline cursor-pointer"
+              >
+                Audit Links →
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
