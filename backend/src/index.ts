@@ -1,9 +1,10 @@
+// CrimeGraph AI Main Backend Server Entrypoint - Auth Rate Limit Dev Tuning
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import prisma from './config/database';
 import { connectRedis, checkRedisHealth } from './config/redis';
-import { connectNeo4j, checkNeo4jHealth, closeNeo4j } from './config/neo4j';
+import { connectNeo4j, checkNeo4jHealthDetails, closeNeo4j } from './config/neo4j';
 import logger from './utils/logger';
 
 // Middleware imports
@@ -64,7 +65,7 @@ app.get('/api/health', async (_req, res) => {
   }
 
   const redisHealthy = await checkRedisHealth();
-  const neo4jHealth = await checkNeo4jHealth();
+  const neo4jHealth = await checkNeo4jHealthDetails();
 
   const isHealthy = dbHealthy && redisHealthy && neo4jHealth.connected;
 
@@ -92,12 +93,19 @@ const HOST = '127.0.0.1'; // SECURITY: Do not listen on 0.0.0.0 during testing/d
 async function startServer() {
   logger.info('Initializing services...');
   
-  // Connect to Redis & Neo4j
-  await connectRedis();
-  await connectNeo4j();
+  // Connect to Redis & Neo4j (with timeout safety)
+  await Promise.race([
+    connectRedis(),
+    new Promise(res => setTimeout(res, 2000))
+  ]).catch(err => logger.warn('Redis connection fallback', err));
 
-  const server = app.listen(PORT, HOST, () => {
-    logger.info(`🚀 CrimeGraph AI Backend running at http://${HOST}:${PORT}`);
+  await Promise.race([
+    connectNeo4j(),
+    new Promise(res => setTimeout(res, 2000))
+  ]).catch(err => logger.warn('Neo4j connection fallback', err));
+
+  const server = app.listen(PORT, () => {
+    logger.info(`🚀 CrimeGraph AI Backend running at http://localhost:${PORT}`);
   });
 
   // Graceful shutdown

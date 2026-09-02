@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import CrimeGraphLogo from '@/components/CrimeGraphLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -51,42 +52,47 @@ export default function LoginPage() {
         return;
       }
 
-      // Login successful. Redirect to dashboard.
-      router.push('/dashboard');
+      // Login successful. Redirect based on role: Admin -> /admin, Investigator -> /dashboard
+      if (data.user?.role === 'ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       setError('A network error occurred. Please check if the server is running.');
       setIsLoading(false);
     }
   };
 
+  const setDemoCredentials = (demoEmail: string) => {
+    setEmail(demoEmail);
+    setPassword('Password123!');
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4">
-      {/* Left decorative panel (hidden on small screens) */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center pr-16">
-        <div className="max-w-md space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-muted)] border border-[var(--card-border)] rounded-full">
-            <div className="p-1 bg-[var(--accent-color)] rounded-full">
-              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <span className="text-xs font-semibold text-[var(--text-secondary)] tracking-wide">Authorized Access Only</span>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 py-8">
+      {/* Left decorative panel */}
+      <div className="hidden lg:flex lg:w-1/2 items-center justify-center pr-12">
+        <div className="max-w-sm space-y-6">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-zinc-100 border border-zinc-200 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+            <span className="text-[10px] font-mono font-semibold text-zinc-700 uppercase tracking-widest">Enterprise Platform</span>
           </div>
-          <h1 className="text-4xl font-bold text-[var(--text-primary)] leading-tight tracking-tight">
-            Investigation<br />Intelligence<br />Platform
+          <h1 className="text-3xl font-semibold text-[var(--text-primary)] leading-tight tracking-tight">
+            Crime Intelligence & Graph Analysis
           </h1>
-          <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-sm">
-            Analyze authorized synthetic and demo investigation data, structure entity profiles from unstructured records, and discover potential relationship pathways across intelligence envelopes.
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+            Ingest structured and unstructured data, map hidden suspect networks, and track complex criminal relationships across intelligence envelopes.
           </p>
-          <div className="grid grid-cols-3 gap-4 pt-4">
+          <div className="grid grid-cols-3 gap-3 pt-2">
             {[
               { label: 'Cases', value: '47+' },
               { label: 'Entities', value: '2.9K' },
               { label: 'Relationships', value: '5.8K' },
             ].map((stat) => (
-              <div key={stat.label} className="text-center p-3 bg-white border border-[var(--card-border)] rounded-xl">
-                <p className="text-xl font-bold text-[var(--text-primary)]">{stat.value}</p>
-                <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mt-0.5">{stat.label}</p>
+              <div key={stat.label} className="text-left p-3 bg-white border border-[var(--card-border)] rounded-md">
+                <p className="text-lg font-semibold text-[var(--text-primary)] font-mono">{stat.value}</p>
+                <p className="text-[9px] font-mono font-semibold text-zinc-400 uppercase tracking-widest mt-0.5">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -94,28 +100,19 @@ export default function LoginPage() {
       </div>
 
       {/* Login card */}
-      <div className="w-full max-w-sm bg-white border border-[var(--card-border)] rounded-2xl p-8 shadow-sm relative z-10">
+      <div className="w-full max-w-sm bg-white border border-[var(--card-border)] rounded-xl p-6 sm:p-8 shadow-xs relative z-10">
         {/* Brand mark */}
-        <div className="flex items-center gap-2.5 mb-8">
-          <div className="p-2 bg-[var(--accent-color)] rounded-lg">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-bold text-[var(--text-primary)] leading-none">CrimeGraph AI</p>
-            <p className="text-[10px] text-[var(--text-tertiary)] mt-0.5 tracking-wide">Investigation Intelligence</p>
-          </div>
+        <div className="mb-6">
+          <CrimeGraphLogo size={24} textClassName="text-sm font-semibold text-black tracking-tight" />
         </div>
 
-        <div className="mb-7">
-          <h2 className="text-xl font-bold text-[var(--text-primary)]">Sign in to your account</h2>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">Enter your credentials to access the platform</p>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Sign in</h2>
+          <p className="text-xs text-[var(--text-secondary)] mt-1">Enter your credentials to access your workspace</p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-xs mb-5 flex items-start gap-2.5">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded-md text-xs mb-5 flex items-start gap-2">
             <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -125,8 +122,8 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5" htmlFor="email">
-              Email Address
+            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1" htmlFor="email">
+              Email
             </label>
             <input
               id="email"
@@ -140,7 +137,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5" htmlFor="password">
+            <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1" htmlFor="password">
               Password
             </label>
             <input
@@ -158,15 +155,12 @@ export default function LoginPage() {
             type="submit"
             id="login-submit-btn"
             disabled={isLoading}
-            className="w-full mt-1 py-2.5 px-4 bg-[var(--accent-color)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--text-tertiary)] text-white text-sm font-semibold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="btn-primary w-full mt-1 justify-center py-2 text-xs"
           >
             {isLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Signing in…</span>
+                <CrimeGraphLogo size={14} showText={false} className="animate-crimegraph-pulse" />
+                <span>Authenticating…</span>
               </>
             ) : (
               <span>Sign In</span>
@@ -175,23 +169,28 @@ export default function LoginPage() {
         </form>
 
         {/* Demo access accounts */}
-        <div className="mt-7 border-t border-[var(--border)] pt-5">
-          <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Demo Access Accounts</p>
+        <div className="mt-6 border-t border-[var(--border)] pt-4">
+          <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-2.5">
+            Click Demo Account to Pre-fill
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { role: 'ADMIN', email: 'admin@crimegraph.demo' },
-              { role: 'INVESTIGATOR', email: 'investigator@crimegraph.demo' },
-              { role: 'SENIOR OFFICER', email: 'senior@crimegraph.demo' },
-              { role: 'VIEWER', email: 'viewer@crimegraph.demo' },
+              { role: 'ADMIN', label: 'ADMIN', email: 'admin@crimegraph.demo' },
+              { role: 'INVESTIGATOR', label: 'OFFICER', email: 'investigator@crimegraph.demo' },
             ].map((acc) => (
-              <div key={acc.role} className="bg-[var(--surface-muted)] p-2 rounded-lg border border-[var(--border-subtle)]">
-                <span className="block text-[9px] font-bold text-[var(--accent-color)] uppercase tracking-wider mb-0.5">{acc.role}</span>
-                <span className="text-[10px] text-[var(--text-secondary)] block truncate">{acc.email}</span>
-              </div>
+              <button
+                key={acc.role}
+                type="button"
+                onClick={() => setDemoCredentials(acc.email)}
+                className="bg-zinc-50 hover:bg-zinc-100 p-2 rounded border border-[var(--card-border)] text-left cursor-pointer transition-colors"
+              >
+                <span className="badge bg-zinc-200 text-zinc-800 font-mono mb-1">{acc.label}</span>
+                <span className="text-[10px] text-zinc-500 block truncate">{acc.email}</span>
+              </button>
             ))}
           </div>
-          <p className="text-[10px] text-[var(--text-tertiary)] mt-2.5 text-center">
-            Password: <span className="text-[var(--accent-color)] font-mono font-bold">Password123!</span>
+          <p className="text-[10px] text-zinc-400 mt-2.5 text-center">
+            Password: <span className="font-mono text-black font-semibold">Password123!</span>
           </p>
         </div>
       </div>

@@ -74,7 +74,7 @@ export class AIProviderManager {
           providerName: 'Google Gemini',
           enabled: true,
           priority: 1,
-          model: process.env.GEMINI_MODEL || 'gemini-1.5-pro',
+          model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
           timeout: 30000,
           maxRetries: 2,
           cooldown: 60,
@@ -281,6 +281,64 @@ export class AIProviderManager {
       confidence: 0,
       error: finalResult?.error || 'All configured providers failed extraction.',
       errorClass: finalResult?.errorClass === 'API_KEY_ABSENCE' ? 'API_KEY_ABSENCE' : 'AI_EXTRACTION_UNAVAILABLE',
+    };
+  }
+
+  /**
+   * Execute chat completion across active providers with priority routing and circuit breaking
+   */
+  public async generateChatCompletion(
+    systemPrompt: string,
+    userMessage: string
+  ): Promise<{
+    success: boolean;
+    answer: string | null;
+    provider: string;
+    model: string;
+    confidence: number;
+    error?: string;
+  }> {
+    const activeConfigs = await this.getActiveProviders();
+    const healthyConfigs = activeConfigs.filter(p => p.healthStatus === 'HEALTHY');
+
+    if (healthyConfigs.length === 0) {
+      return {
+        success: false,
+        answer: null,
+        provider: 'none',
+        model: 'none',
+        confidence: 0,
+        error: 'AI chat service is temporarily unavailable because all providers are disabled or in cooldown.',
+      };
+    }
+
+    for (const pConfig of healthyConfigs) {
+      const providerImpl = this.providers[pConfig.providerId];
+      if (!providerImpl || !providerImpl.generateChatCompletion) continue;
+
+      logger.info(`Routing AI chat query to Provider: ${pConfig.providerName} (${pConfig.model})`);
+
+      const result = await providerImpl.generateChatCompletion(systemPrompt, userMessage, pConfig);
+      if (result && result.success && result.answer) {
+        return {
+          success: true,
+          answer: result.answer,
+          provider: pConfig.providerId,
+          model: pConfig.model,
+          confidence: result.confidence || 0.90,
+        };
+      }
+
+      logger.warn(`Provider ${pConfig.providerName} failed chat completion: ${result?.error}`);
+    }
+
+    return {
+      success: false,
+      answer: null,
+      provider: 'none',
+      model: 'none',
+      confidence: 0,
+      error: 'AI conversational services are temporarily unavailable as no configured provider was reachable.',
     };
   }
 }

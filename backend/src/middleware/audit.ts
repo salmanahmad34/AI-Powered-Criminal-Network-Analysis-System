@@ -58,8 +58,9 @@ function sanitizeAuditDetails(details: Record<string, unknown>): Record<string, 
 export function auditMiddleware(action: AuditAction, resourceType?: string) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     const userId = req.user?.userId || null;
-    const resourceId = req.params.id || undefined;
-    const ip = req.ip || req.socket.remoteAddress;
+    const resourceId = (Array.isArray(req.params.id) ? req.params.id[0] : req.params.id) || undefined;
+    const rawIp = req.ip || req.socket.remoteAddress;
+    const ip = (Array.isArray(rawIp) ? rawIp[0] : rawIp) || undefined;
 
     // Fire and forget — don't block the request
     recordAudit(userId, action, resourceType, resourceId, undefined, ip);

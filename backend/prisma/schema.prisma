@@ -15,8 +15,6 @@ datasource db {
 enum UserRole {
   ADMIN
   INVESTIGATOR
-  SENIOR_OFFICER
-  VIEWER
 }
 
 enum UserStatus {
@@ -200,6 +198,7 @@ model User {
   failedLoginCount  Int        @default(0) @map("failed_login_count")
   lockedUntil       DateTime?  @map("locked_until")
   mfaEnabled        Boolean    @default(false) @map("mfa_enabled")
+  mustChangePassword Boolean   @default(false) @map("must_change_password")
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 
@@ -279,6 +278,8 @@ model Document {
   processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
   validationStatus ValidationStatus @default(PENDING) @map("validation_status")
   validationErrors Json?            @map("validation_errors")
+  extractionMethod String?          @default("AI") @map("extraction_method")
+  fallbackReason   String?          @map("fallback_reason")
   uploadedById     String           @map("uploaded_by_id")
   uploadedAt       DateTime         @default(now()) @map("uploaded_at")
 

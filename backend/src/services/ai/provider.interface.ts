@@ -55,6 +55,22 @@ export interface NormalizedExtractionResult {
   errorClass?: string;
 }
 
+export interface NormalizedChatResult {
+  success: boolean;
+  provider: string;
+  model: string;
+  requestId: string;
+  answer: string | null;
+  confidence: number;
+  usage: {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    estimatedCost: number | null;
+  };
+  error?: string;
+  errorClass?: string;
+}
+
 export interface AIProvider {
   providerId: string;
   extractDocument(
@@ -62,4 +78,9 @@ export interface AIProvider {
     metadata: { caseId: string; documentId: string },
     config: AIProviderConfig
   ): Promise<NormalizedExtractionResult>;
+  generateChatCompletion?(
+    systemPrompt: string,
+    userMessage: string,
+    config: AIProviderConfig
+  ): Promise<NormalizedChatResult>;
 }

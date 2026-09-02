@@ -50,7 +50,10 @@ export class GeminiProvider implements AIProvider {
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-goog-api-key': apiKey,
+        },
         body: JSON.stringify(body),
         signal: controller.signal,
       });
@@ -85,7 +88,7 @@ export class GeminiProvider implements AIProvider {
         };
       }
 
-      const resData = await response.json();
+      const resData: any = await response.json();
       const textOutput = resData.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!textOutput) {
@@ -147,6 +150,126 @@ export class GeminiProvider implements AIProvider {
         extraction: null,
         usage: { inputTokens: null, outputTokens: null, estimatedCost: null },
         confidence: 0,
+        error: isTimeout ? 'Request timed out.' : (err as Error).message,
+        errorClass: isTimeout ? 'TIMEOUT' : 'NETWORK_FAILURE',
+      };
+    }
+  }
+
+  public async generateChatCompletion(
+    systemPrompt: string,
+    userMessage: string,
+    config: AIProviderConfig
+  ): Promise<any> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    const modelName = config.model || process.env.GEMINI_MODEL || 'gemini-1.5-pro';
+    const requestId = `req-chat-gemini-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    if (!apiKey) {
+      return {
+        success: false,
+        provider: config.providerId,
+        model: modelName,
+        requestId,
+        answer: null,
+        confidence: 0,
+        usage: { inputTokens: null, outputTokens: null, estimatedCost: null },
+        error: 'API key is missing for Gemini Provider.',
+        errorClass: 'API_KEY_ABSENCE',
+      };
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const fullPrompt = `${systemPrompt}\n\nUSER QUESTION:\n${userMessage}`;
+
+    const body = {
+      contents: [{ parts: [{ text: fullPrompt }] }],
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.status === 429) {
+        return {
+          success: false,
+          provider: config.providerId,
+          model: modelName,
+          requestId,
+          answer: null,
+          confidence: 0,
+          usage: { inputTokens: null, outputTokens: null, estimatedCost: null },
+          error: 'Gemini Rate limit exceeded.',
+          errorClass: 'HTTP_429',
+        };
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          provider: config.providerId,
+          model: modelName,
+          requestId,
+          answer: null,
+          confidence: 0,
+          usage: { inputTokens: null, outputTokens: null, estimatedCost: null },
+          error: `Gemini API error code ${response.status}: ${response.statusText}`,
+          errorClass: response.status >= 500 ? 'HTTP_5XX' : 'API_ERROR',
+        };
+      }
+
+      const resData: any = await response.json();
+      const textOutput = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!textOutput) {
+        return {
+          success: false,
+          provider: config.providerId,
+          model: modelName,
+          requestId,
+          answer: null,
+          confidence: 0,
+          usage: { inputTokens: null, outputTokens: null, estimatedCost: null },
+          error: 'Malformed response structure from Gemini API.',
+          errorClass: 'MALFORMED_OUTPUT',
+        };
+      }
+
+      const inputTokens = resData.usageMetadata?.promptTokenCount || null;
+      const outputTokens = resData.usageMetadata?.candidatesTokenCount || null;
+
+      return {
+        success: true,
+        provider: this.providerId,
+        model: modelName,
+        requestId,
+        answer: textOutput.trim(),
+        confidence: 0.95,
+        usage: { inputTokens, outputTokens, estimatedCost: null },
+      };
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const isTimeout = (err as any).name === 'AbortError';
+      return {
+        success: false,
+        provider: config.providerId,
+        model: modelName,
+        requestId,
+        answer: null,
+        confidence: 0,
+        usage: { inputTokens: null, outputTokens: null, estimatedCost: null },
         error: isTimeout ? 'Request timed out.' : (err as Error).message,
         errorClass: isTimeout ? 'TIMEOUT' : 'NETWORK_FAILURE',
       };

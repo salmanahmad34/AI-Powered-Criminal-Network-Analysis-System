@@ -134,4 +134,31 @@ router.post('/refresh', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/auth/change-password
+ * Requires authentication.
+ */
+router.post('/change-password', authenticate, async (req: Request, res: Response) => {
+  try {
+    const changeSchema = z.object({
+      newPassword: z.string().min(8).max(128),
+    });
+
+    const parsed = changeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+      return;
+    }
+
+    const { changePassword } = await import('../services/auth.service');
+    await changePassword(req.user!.userId, parsed.data.newPassword);
+
+    await recordAudit(req.user!.userId, AuditAction.USER_UPDATED, 'user', req.user!.userId, { action: 'PASSWORD_CHANGED' }, req.ip || undefined);
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to change password.' });
+  }
+});
+
 export default router;

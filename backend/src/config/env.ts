@@ -2,6 +2,23 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
+// Parse local .env file if available
+const envPath = path.join(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+      const [key, ...valParts] = trimmed.split('=');
+      const keyName = key.trim();
+      const val = valParts.join('=').trim();
+      if (!process.env[keyName] || process.env[keyName] === '') {
+        process.env[keyName] = val;
+      }
+    }
+  }
+}
+
 // Environment validation — fail fast if critical config is missing
 function getRequiredEnv(key: string): string {
   const value = process.env[key];

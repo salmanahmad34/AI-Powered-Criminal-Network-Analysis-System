@@ -22,12 +22,6 @@ describe('Case & Ingestion Processing Tests (Mock Mode)', () => {
         role: 'INVESTIGATOR',
         fullName: 'Investigator User',
       },
-      {
-        id: 'viewer-uuid-4444',
-        email: 'viewer@crimegraph.demo',
-        role: 'VIEWER',
-        fullName: 'Viewer User',
-      },
     ];
   });
 

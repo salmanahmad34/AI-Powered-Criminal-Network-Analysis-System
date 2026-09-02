@@ -64,12 +64,12 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 export function generateTokens(payload: Omit<JwtPayload, 'iat' | 'exp'>) {
   const accessToken = jwt.sign(payload, config.jwt.accessSecret, {
     algorithm: 'HS256',
-    expiresIn: config.jwt.accessExpiresIn,
+    expiresIn: config.jwt.accessExpiresIn as jwt.SignOptions['expiresIn'],
   });
 
   const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, {
     algorithm: 'HS256',
-    expiresIn: config.jwt.refreshExpiresIn,
+    expiresIn: config.jwt.refreshExpiresIn as jwt.SignOptions['expiresIn'],
   });
 
   return { accessToken, refreshToken };

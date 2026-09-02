@@ -7,50 +7,40 @@ import logger from '../utils/logger';
  * Maps actions to allowed roles.
  */
 const PERMISSIONS: Record<string, UserRole[]> = {
-  // Admin
+  // Admin Only
   'users:manage':       ['ADMIN'],
   'settings:manage':    ['ADMIN'],
   'system:health':      ['ADMIN'],
   'demo:manage':        ['ADMIN'],
+  'audit:view':         ['ADMIN'],
 
-  // Cases
-  'cases:create':       ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER'],
-  'cases:view':         ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-  'cases:update':       ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER'],
-  'cases:assign':       ['ADMIN', 'SENIOR_OFFICER'],
+  // Cases & Investigation (Admin & Investigator)
+  'cases:create':       ['ADMIN', 'INVESTIGATOR'],
+  'cases:view':         ['ADMIN', 'INVESTIGATOR'],
+  'cases:update':       ['ADMIN', 'INVESTIGATOR'],
+  'cases:assign':       ['ADMIN', 'INVESTIGATOR'],
 
-  // Data
-  'data:upload':        ['INVESTIGATOR'],
-  'data:process':       ['INVESTIGATOR'],
+  // Data Upload & Ingestion
+  'data:upload':        ['ADMIN', 'INVESTIGATOR'],
+  'data:process':       ['ADMIN', 'INVESTIGATOR'],
 
-  // Entities
-  'entities:view':      ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-  'entities:review':    ['INVESTIGATOR'],
+  // Entities & Network Graph
+  'entities:view':      ['ADMIN', 'INVESTIGATOR'],
+  'entities:review':    ['ADMIN', 'INVESTIGATOR'],
+  'network:view':       ['ADMIN', 'INVESTIGATOR'],
+  'network:analytics':  ['ADMIN', 'INVESTIGATOR'],
 
-  // Network
-  'network:view':       ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-  'network:analytics':  ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER'],
+  // Alerts & Intelligence
+  'alerts:view':        ['ADMIN', 'INVESTIGATOR'],
+  'alerts:review':      ['ADMIN', 'INVESTIGATOR'],
+  'ai:query':           ['ADMIN', 'INVESTIGATOR'],
 
-  // Alerts
-  'alerts:view':        ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-  'alerts:review':      ['INVESTIGATOR', 'SENIOR_OFFICER'],
-
-  // AI
-  'ai:query':           ['INVESTIGATOR', 'SENIOR_OFFICER'],
-
-  // Notes
-  'notes:create':       ['INVESTIGATOR'],
-  'notes:view':         ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-
-  // Reports
-  'reports:generate':   ['INVESTIGATOR', 'SENIOR_OFFICER'],
-  'reports:view':       ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-
-  // Documents
-  'documents:view':     ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'],
-
-  // Audit
-  'audit:view':         ['ADMIN', 'SENIOR_OFFICER'],
+  // Notes, Reports & Documents
+  'notes:create':       ['ADMIN', 'INVESTIGATOR'],
+  'notes:view':         ['ADMIN', 'INVESTIGATOR'],
+  'reports:generate':   ['ADMIN', 'INVESTIGATOR'],
+  'reports:view':       ['ADMIN', 'INVESTIGATOR'],
+  'documents:view':     ['ADMIN', 'INVESTIGATOR'],
 };
 
 /**

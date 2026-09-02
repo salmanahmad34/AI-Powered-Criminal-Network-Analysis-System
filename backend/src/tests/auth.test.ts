@@ -30,12 +30,12 @@ describe('Auth Services & Middleware Tests (Mock Mode)', () => {
         updatedAt: new Date(),
       },
       {
-        id: 'viewer-4444',
-        email: 'viewer@crimegraph.demo',
+        id: 'investigator-2222',
+        email: 'investigator@crimegraph.demo',
         passwordHash: hash,
-        role: UserRole.VIEWER,
+        role: UserRole.INVESTIGATOR,
         status: UserStatus.ACTIVE,
-        fullName: 'Viewer User',
+        fullName: 'Investigator User',
         lastLogin: null,
         failedLoginCount: 0,
         lockedUntil: null,
@@ -99,7 +99,7 @@ describe('Auth Services & Middleware Tests (Mock Mode)', () => {
     });
 
     it('blocks access (returns 403) if user lacks role', () => {
-      const req: any = { user: { userId: 'viewer-4444', role: 'VIEWER', email: 'viewer@crimegraph.demo' } };
+      const req: any = { user: { userId: 'investigator-2222', role: 'INVESTIGATOR', email: 'investigator@crimegraph.demo' } };
       const res: any = {
         status: vi.fn().mockReturnThis(),
         json: vi.fn(),

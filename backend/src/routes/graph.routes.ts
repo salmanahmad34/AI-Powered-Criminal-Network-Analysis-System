@@ -16,7 +16,7 @@ router.use(authenticate);
  */
 router.get(
   '/health',
-  authorize(['VIEWER', 'INVESTIGATOR', 'SENIOR_OFFICER', 'ADMIN']),
+  authorize('network:view'),
   async (req: Request, res: Response): Promise<void> => {
     try {
       const health = await checkNeo4jHealthDetails();
@@ -39,9 +39,9 @@ router.get(
  */
 router.post(
   '/sync/case/:caseId',
-  authorize(['INVESTIGATOR', 'SENIOR_OFFICER', 'ADMIN']),
+  authorize('data:process'),
   async (req: Request, res: Response): Promise<void> => {
-    const { caseId } = req.params;
+    const caseId = req.params.caseId as string;
     try {
       const result = await graphSyncService.syncCaseToGraph(caseId);
       if (!result.success) {
@@ -69,9 +69,9 @@ router.post(
  */
 router.get(
   '/case/:caseId',
-  authorize(['VIEWER', 'INVESTIGATOR', 'SENIOR_OFFICER', 'ADMIN']),
+  authorize('network:view'),
   async (req: Request, res: Response): Promise<void> => {
-    const { caseId } = req.params;
+    const caseId = req.params.caseId as string;
     try {
       const graphData = await graphSyncService.getCaseGraph(caseId);
       res.json(graphData);
@@ -88,9 +88,9 @@ router.get(
  */
 router.get(
   '/entity/:entityId',
-  authorize(['VIEWER', 'INVESTIGATOR', 'SENIOR_OFFICER', 'ADMIN']),
+  authorize('network:view'),
   async (req: Request, res: Response): Promise<void> => {
-    const { entityId } = req.params;
+    const entityId = req.params.entityId as string;
     const hops = parseInt((req.query.hops as string) || '1', 10);
     try {
       const neighborhood = await graphSyncService.getEntityNeighborhood(entityId, hops);

@@ -3,15 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import CrimeGraphLogo from '@/components/CrimeGraphLogo';
+import CrimeGraphLoader from '@/components/CrimeGraphLoader';
 
 interface User {
   id: string;
   email: string;
-  role: 'ADMIN' | 'INVESTIGATOR' | 'SENIOR_OFFICER' | 'VIEWER';
+  role: 'ADMIN' | 'INVESTIGATOR';
   fullName: string;
+  mustChangePassword?: boolean;
 }
 
-// Security: Mask email to protect user privacy in UI
 function maskEmail(email: string): string {
   if (!email) return '';
   const parts = email.split('@');
@@ -28,8 +30,15 @@ export default function DashboardLayout({
 }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Desktop sidebar state
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile drawer state
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Force Password Change state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+
   const router = useRouter();
   const pathname = usePathname();
 
@@ -52,7 +61,6 @@ export default function DashboardLayout({
     fetchUser();
   }, [router]);
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
@@ -61,42 +69,75 @@ export default function DashboardLayout({
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (err) {
-      // Ignore network errors on logout
+      // ignore
     } finally {
       setUser(null);
       window.location.href = '/login';
     }
   };
 
+  const handlePasswordChangeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+
+    setUpdatingPassword(true);
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setPasswordError(data.error || 'Failed to update password.');
+        setUpdatingPassword(false);
+        return;
+      }
+
+      setUser((prev) => (prev ? { ...prev, mustChangePassword: false } : null));
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordError('Network error updating password.');
+    } finally {
+      setUpdatingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <div className="flex flex-col items-center gap-3">
-          <svg className="animate-spin h-7 w-7 text-[var(--accent-color)]" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span className="text-xs text-[var(--text-secondary)] font-medium tracking-wide">Verifying credentials…</span>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-4">
+        <CrimeGraphLoader size={36} text="Authenticating credentials…" />
       </div>
     );
   }
 
   if (!user) return null;
 
-  // RBAC Menu configuration
   const menuItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'Cases', path: '/cases', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'Data Center', path: '/datacenter', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', roles: ['INVESTIGATOR'] },
-    { name: 'Processing', path: '/processing', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', roles: ['INVESTIGATOR'] },
-    { name: 'Entities Database', path: '/entities', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'Network Analysis', path: '/network', icon: 'M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'Alerts Queue', path: '/alerts', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'AI Assistant', path: '/ai', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', roles: ['INVESTIGATOR', 'SENIOR_OFFICER'] },
-    { name: 'Documents', path: '/documents', icon: 'M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'Intelligence Reports', path: '/reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', roles: ['ADMIN', 'INVESTIGATOR', 'SENIOR_OFFICER', 'VIEWER'] },
-    { name: 'Audit Logs', path: '/logs', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', roles: ['ADMIN', 'SENIOR_OFFICER'] },
+    { name: 'Dashboard', path: '/dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Cases', path: '/cases', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Data Center', path: '/datacenter', icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Processing', path: '/processing', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Entities Database', path: '/entities', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Network Analysis', path: '/network', icon: 'M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Alerts Queue', path: '/alerts', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'AI Assistant', path: '/ai', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Documents', path: '/documents', icon: 'M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Intelligence Reports', path: '/reports', icon: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', roles: ['ADMIN', 'INVESTIGATOR'] },
+    { name: 'Audit Logs', path: '/logs', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', roles: ['ADMIN'] },
     { name: 'Admin Panel', path: '/admin', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', roles: ['ADMIN'] },
   ];
 
@@ -104,35 +145,21 @@ export default function DashboardLayout({
 
   const renderNavContent = () => (
     <>
-      {/* Brand */}
-      <div className="h-14 lg:h-16 flex items-center justify-between px-5 lg:px-6 border-b border-[var(--border)] shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-[var(--accent-muted)] border border-[var(--card-border)] rounded-lg text-[var(--accent-color)]">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-            </svg>
-          </div>
-          <span className="font-bold text-sm text-[var(--text-primary)] tracking-tight">CrimeGraph AI</span>
-        </div>
-
-        {/* Mobile close button */}
+      {/* Brand Header */}
+      <div className="h-14 flex items-center justify-between px-4 border-b border-[var(--border)] shrink-0">
+        <CrimeGraphLogo size={22} textClassName="text-xs font-semibold text-black tracking-tight" />
         <button
           onClick={() => setMobileMenuOpen(false)}
-          className="lg:hidden p-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] rounded-lg"
-          aria-label="Close navigation"
+          className="lg:hidden p-1.5 text-zinc-400 hover:text-black rounded"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          ✕
         </button>
       </div>
 
       {/* Navigation links */}
-      <nav className="flex-1 px-3 lg:px-4 py-5 space-y-6 overflow-y-auto touch-scroll">
-        {/* Main Intelligence Section */}
+      <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto touch-scroll">
         <div className="space-y-1">
-          <span className="px-3 lg:px-4 text-[10px] font-extrabold text-stone-400 tracking-wider uppercase block mb-2">Intelligence</span>
+          <span className="px-2.5 text-[10px] font-mono text-zinc-400 tracking-widest uppercase block mb-1.5">Intelligence</span>
           {visibleMenuItems
             .filter(item => !['Admin Panel', 'Audit Logs'].includes(item.name))
             .map((item) => {
@@ -148,13 +175,13 @@ export default function DashboardLayout({
                   key={item.path}
                   href={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 lg:px-4 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                     isActive
-                      ? 'bg-[var(--accent-color)] text-white shadow-sm'
-                      : 'text-stone-500 hover:bg-stone-50 hover:text-foreground'
+                      ? 'bg-black text-white shadow-xs'
+                      : 'text-zinc-600 hover:bg-zinc-100 hover:text-black'
                   }`}
                 >
-                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75">
+                  <svg className="w-3.5 h-3.5 shrink-0 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75">
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                   </svg>
                   <span className="truncate">{displayName}</span>
@@ -165,59 +192,54 @@ export default function DashboardLayout({
 
         {/* Administration Section */}
         {visibleMenuItems.some(item => ['Admin Panel', 'Audit Logs'].includes(item.name)) && (
-          <div className="space-y-1">
-            <span className="px-3 lg:px-4 text-[10px] font-extrabold text-stone-400 tracking-wider uppercase block mb-2">Administration</span>
+          <div className="space-y-1 pt-2 border-t border-[var(--border-subtle)]">
+            <span className="px-2.5 text-[10px] font-mono text-zinc-400 tracking-widest uppercase block mb-1.5">System</span>
             {visibleMenuItems
               .filter(item => ['Admin Panel', 'Audit Logs'].includes(item.name))
               .map((item) => {
                 const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
                 let displayName = item.name;
-                if (item.name === 'Admin Panel') displayName = 'Admin';
+                if (item.name === 'Admin Panel') displayName = 'Admin Control';
 
                 return (
                   <Link
                     key={item.path}
                     href={item.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3.5 lg:px-4 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+                    className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-[var(--accent-color)] text-white shadow-sm'
-                        : 'text-stone-500 hover:bg-stone-50 hover:text-foreground'
+                        ? 'bg-black text-white shadow-xs'
+                        : 'text-zinc-600 hover:bg-zinc-100 hover:text-black'
                     }`}
                   >
-                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75">
+                    <svg className="w-3.5 h-3.5 shrink-0 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75">
                       <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                     </svg>
                     <span className="truncate">{displayName}</span>
                   </Link>
                 );
               })}
-            
-            <div className="flex items-center gap-3 px-3.5 lg:px-4 py-2.5 rounded-lg text-xs font-semibold text-stone-400 cursor-not-allowed opacity-50">
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              </svg>
-              <span>Settings</span>
-            </div>
           </div>
         )}
       </nav>
 
-      {/* User Info footer */}
-      <div className="p-4 border-t border-border bg-stone-50 flex items-center justify-between shrink-0">
+      {/* User Info Footer */}
+      <div className="p-3 border-t border-[var(--border)] bg-zinc-50 flex items-center justify-between shrink-0">
         <div className="min-w-0 pr-2">
-          <p className="text-xs font-bold text-foreground truncate">{user.fullName}</p>
-          <p className="text-[10px] text-stone-400 font-medium truncate">{maskEmail(user.email)}</p>
-          <span className="inline-flex mt-1.5 px-2 py-0.5 text-[9px] font-extrabold tracking-wider rounded bg-stone-200 border border-stone-300 text-stone-600 uppercase">
-            {user.role}
-          </span>
+          <p className="text-xs font-semibold text-black truncate">{user.fullName}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="badge bg-zinc-200 border-zinc-300 text-zinc-800 font-mono">
+              {user.role === 'INVESTIGATOR' ? 'OFFICER' : user.role}
+            </span>
+            <span className="text-[10px] text-zinc-400 truncate">{maskEmail(user.email)}</span>
+          </div>
         </div>
         <button
           onClick={handleLogout}
-          className="p-2.5 text-stone-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
+          className="p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-200 rounded transition-colors cursor-pointer"
           title="Log Out"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
         </button>
@@ -235,7 +257,7 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Mobile Drawer (Slide-over) */}
+      {/* Mobile Drawer */}
       <aside
         className={`fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[var(--sidebar-bg)] border-r border-border flex flex-col z-50 lg:hidden transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
@@ -244,7 +266,7 @@ export default function DashboardLayout({
         {renderNavContent()}
       </aside>
 
-      {/* Desktop Sidebar (Collapsible) */}
+      {/* Desktop Sidebar */}
       <aside
         className={`hidden lg:flex ${
           sidebarOpen ? 'w-64' : 'w-0 -translate-x-full border-r-0'
@@ -253,53 +275,112 @@ export default function DashboardLayout({
         {renderNavContent()}
       </aside>
 
-      {/* Main content wrapper */}
+      {/* Main Content Wrapper */}
       <div className="flex-1 flex flex-col overflow-hidden relative w-full">
-        {/* Responsive Header */}
         <header className="h-14 bg-white border-b border-[var(--border)] flex items-center justify-between px-4 sm:px-6 z-10 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 -ml-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] rounded-lg cursor-pointer transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
+              className="lg:hidden p-2 -ml-1 text-[var(--text-secondary)] hover:text-black hover:bg-zinc-100 rounded-lg cursor-pointer transition-all"
               aria-label="Open mobile menu"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
-            {/* Desktop Sidebar Toggle */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="hidden lg:flex p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] rounded-md cursor-pointer transition-all"
-              aria-label="Toggle sidebar"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
 
-            {/* Current Page Title */}
-            <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="hidden lg:flex p-1.5 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-md cursor-pointer transition-all"
+              aria-label="Toggle sidebar"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+
+            <span className="text-xs font-semibold text-black truncate">
               {visibleMenuItems.find(item => pathname === item.path || pathname?.startsWith(item.path + '/'))?.name || 'System'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-              <span className="text-[9px] sm:text-[10px] font-semibold text-emerald-700 tracking-wide whitespace-nowrap">DEMO DATABASE</span>
-            </div>
-            <span className="hidden sm:inline-block text-[10px] font-bold text-[var(--text-tertiary)] tracking-widest uppercase">DEV PORTAL</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="badge bg-zinc-100 text-zinc-800 font-mono">
+              {user.role === 'INVESTIGATOR' ? 'OFFICER PORTAL' : 'ADMIN PORTAL'}
+            </span>
           </div>
         </header>
 
-        {/* Main Content Pane */}
+        {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background touch-scroll">
           {children}
         </main>
       </div>
+
+      {/* FORCE PASSWORD CHANGE MODAL */}
+      {user.mustChangePassword && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-amber-100 border border-amber-300 text-amber-700 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-black">Mandatory Password Update</h3>
+                <p className="text-xs text-zinc-500 mt-0.5">Please set a permanent password on first login.</p>
+              </div>
+            </div>
+
+            {passwordError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-2.5 rounded text-xs">
+                {passwordError}
+              </div>
+            )}
+
+            <form onSubmit={handlePasswordChangeSubmit} className="space-y-4 pt-1">
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 mb-1" htmlFor="newPassword">
+                  New Password (min 8 chars)
+                </label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="form-input text-xs"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-700 mb-1" htmlFor="confirmPassword">
+                  Confirm Password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="form-input text-xs"
+                  required
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={updatingPassword}
+                  className="btn-primary w-full justify-center py-2 text-xs"
+                >
+                  {updatingPassword ? 'Updating Password…' : 'Update Password & Access System'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

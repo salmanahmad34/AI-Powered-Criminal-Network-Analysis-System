@@ -289,8 +289,8 @@ describe('AI Gateway & Extraction Pipeline Integration Tests', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    it('blocks Viewer user from accessing provider toggles', () => {
-      const req: any = { user: { userId: 'viewer-4444', role: 'VIEWER', email: 'viewer@crimegraph.demo' } };
+    it('blocks Investigator user from accessing provider toggles', () => {
+      const req: any = { user: { userId: 'investigator-2222', role: 'INVESTIGATOR', email: 'investigator@crimegraph.demo' } };
       const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
       const next = vi.fn();
 

@@ -20,16 +20,6 @@ async function main() {
       fullName: 'Lead Investigator (Demo)',
       role: UserRole.INVESTIGATOR,
     },
-    {
-      email: 'senior@crimegraph.demo',
-      fullName: 'Senior Officer (Demo)',
-      role: UserRole.SENIOR_OFFICER,
-    },
-    {
-      email: 'viewer@crimegraph.demo',
-      fullName: 'Case Viewer (Demo)',
-      role: UserRole.VIEWER,
-    },
   ];
 
   for (const user of demoUsers) {

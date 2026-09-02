@@ -47,10 +47,10 @@ class MockPrismaClient {
   }
 
   private seed() {
-    const salt = bcrypt.genSaltSync(10);
+    const salt = bcrypt.genSaltSync(4);
     const hash = bcrypt.hashSync('Password123!', salt);
 
-    // Initial Demo Users
+    // Initial Demo Users (Strictly ADMIN and INVESTIGATOR)
     this.users = [
       {
         id: 'admin-uuid-1111',
@@ -73,34 +73,6 @@ class MockPrismaClient {
         role: UserRole.INVESTIGATOR,
         status: UserStatus.ACTIVE,
         fullName: 'Lead Investigator (Demo)',
-        lastLogin: null,
-        failedLoginCount: 0,
-        lockedUntil: null,
-        mfaEnabled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 'senior-uuid-3333',
-        email: 'senior@crimegraph.demo',
-        passwordHash: hash,
-        role: UserRole.SENIOR_OFFICER,
-        status: UserStatus.ACTIVE,
-        fullName: 'Senior Officer (Demo)',
-        lastLogin: null,
-        failedLoginCount: 0,
-        lockedUntil: null,
-        mfaEnabled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 'viewer-uuid-4444',
-        email: 'viewer@crimegraph.demo',
-        passwordHash: hash,
-        role: UserRole.VIEWER,
-        status: UserStatus.ACTIVE,
-        fullName: 'Case Viewer (Demo)',
         lastLogin: null,
         failedLoginCount: 0,
         lockedUntil: null,
@@ -187,7 +159,7 @@ class MockPrismaClient {
         providerName: 'Google Gemini API',
         enabled: true,
         priority: 1,
-        model: process.env.GEMINI_MODEL || 'gemini-1.5-pro',
+        model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
         timeout: 30000,
         maxRetries: 2,
         cooldown: 60,
@@ -375,8 +347,47 @@ class MockPrismaClient {
       const take = args?.take || 20;
       return mapped.slice(skip, skip + take);
     },
+    findFirst: async (args: { where: any; include?: any }) => {
+      const targetId = args.where.id;
+      const targetNumber = args.where.caseNumber;
+      const orList = args.where.OR;
+
+      const c = this.cases.find(item => {
+        if (targetId && item.id === targetId) return true;
+        if (targetNumber && item.caseNumber === targetNumber) return true;
+        if (orList && Array.isArray(orList)) {
+          return orList.some(o => (o.id && item.id === o.id) || (o.caseNumber && item.caseNumber === o.caseNumber));
+        }
+        return false;
+      });
+
+      if (!c) return null;
+      const copy = { ...c };
+      if (args.include?.createdBy) {
+        copy.createdBy = this.users.find(u => u.id === c.createdById);
+      }
+      if (args.include?.assignedInvestigator) {
+        copy.assignedInvestigator = this.users.find(u => u.id === c.assignedInvestigatorId) || null;
+      }
+      if (args.include?.assignments) {
+        copy.assignments = this.caseAssignments.filter(a => a.caseId === c.id);
+      }
+      if (args.include?.documents) {
+        copy.documents = this.documents.filter(d => d.caseId === c.id);
+      }
+      if (args.include?.entities) {
+        copy.entities = this.entities
+          .filter(e => e.caseId === c.id)
+          .map(e => ({
+            ...e,
+            aliases: this.entityAliases.filter(a => a.entityId === e.id),
+            identifiers: this.entityIdentifiers.filter(i => i.entityId === e.id),
+          }));
+      }
+      return copy;
+    },
     findUnique: async (args: { where: { id: string }; include?: any }) => {
-      const c = this.cases.find(item => item.id === args.where.id);
+      const c = this.cases.find(item => item.id === args.where.id || item.caseNumber === args.where.id);
       if (!c) return null;
       const copy = { ...c };
       if (args.include?.createdBy) {
@@ -762,7 +773,11 @@ class MockPrismaClient {
     findMany: async (args?: { where?: any }) => {
       let list = [...this.extractedRelationships];
       if (args?.where?.documentId) {
-        list = list.filter(r => r.documentId === args.where.documentId);
+        if (typeof args.where.documentId === 'object' && args.where.documentId.in) {
+          list = list.filter(r => args.where.documentId.in.includes(r.documentId));
+        } else {
+          list = list.filter(r => r.documentId === args.where.documentId);
+        }
       }
       if (args?.where?.document?.caseId) {
         const caseDocIds = this.documents

@@ -18,6 +18,7 @@ export interface LoginResult {
     email: string;
     role: UserRole;
     fullName: string;
+    mustChangePassword?: boolean;
   };
   error?: string;
 }
@@ -105,6 +106,7 @@ export async function loginUser(
       email: user.email,
       role: user.role,
       fullName: user.fullName,
+      mustChangePassword: user.mustChangePassword ?? false,
     },
   };
 }
@@ -114,6 +116,21 @@ export async function loginUser(
  */
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+
+/**
+ * Change user password and clear mustChangePassword flag.
+ */
+export async function changePassword(userId: string, newPassword: string): Promise<boolean> {
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash,
+      mustChangePassword: false,
+    },
+  });
+  return true;
 }
 
 /**
@@ -128,6 +145,7 @@ export async function getUserProfile(userId: string) {
       role: true,
       fullName: true,
       status: true,
+      mustChangePassword: true,
       lastLogin: true,
       mfaEnabled: true,
       createdAt: true,

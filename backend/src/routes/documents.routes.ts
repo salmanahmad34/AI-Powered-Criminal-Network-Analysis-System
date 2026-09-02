@@ -17,6 +17,37 @@ function computeFileHash(filePath: string): string {
 }
 
 /**
+ * GET /api/documents
+ * List all documents with case and uploader details.
+ */
+router.get('/', authorize('documents:view'), async (req: Request, res: Response) => {
+  try {
+    const { caseId, limit = '50' } = req.query;
+    const where: Record<string, unknown> = {};
+    if (caseId) where.caseId = caseId as string;
+
+    const docs = await prisma.document.findMany({
+      where: where as any,
+      include: {
+        case: { select: { id: true, caseNumber: true, title: true } },
+        uploadedBy: { select: { id: true, fullName: true, role: true, email: true } },
+      },
+      orderBy: { uploadedAt: 'desc' },
+      take: Math.min(parseInt(limit as string, 10) || 50, 200),
+    });
+
+    const serialized = docs.map((d: any) => ({
+      ...d,
+      fileSize: d.fileSize ? d.fileSize.toString() : '0',
+    }));
+
+    res.json({ documents: serialized });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch documents.' });
+  }
+});
+
+/**
  * GET /api/documents/:id
  * Retrieve details of a document/metadata record.
  */
@@ -74,6 +105,29 @@ router.get('/:id/integrity', authorize('documents:view'), async (req: Request, r
     });
   } catch (err) {
     res.status(500).json({ error: 'Integrity verification failed.' });
+  }
+});
+
+/**
+ * GET /api/documents/:id/download
+ * Download raw stored file.
+ */
+router.get('/:id/download', authorize('documents:view'), async (req: Request, res: Response) => {
+  try {
+    const doc = await prisma.document.findUnique({ where: { id: req.params.id } });
+    if (!doc) {
+      res.status(404).json({ error: 'Document not found.' });
+      return;
+    }
+
+    if (!fs.existsSync(doc.filePath)) {
+      res.status(404).json({ error: 'File not found on storage disk.' });
+      return;
+    }
+
+    res.download(doc.filePath, doc.originalFilename);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to download document.' });
   }
 });
 

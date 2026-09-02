@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import CrimeGraphLoader from '@/components/CrimeGraphLoader';
 
 interface User {
   id: string;
@@ -55,8 +56,7 @@ export default function CasesPage() {
         const usersRes = await fetch('/api/admin/users');
         if (usersRes.ok) {
           const data = await usersRes.json();
-          const invList = data.users.filter((u: User) => u.role !== 'VIEWER');
-          setInvestigators(invList);
+          setInvestigators(data.users || []);
         }
       } catch (err) {
         // Ignore initialization errors
@@ -93,33 +93,29 @@ export default function CasesPage() {
     fetchCases();
   }, [search, status, priority, type, assignedInvestigatorId]);
 
-  const canCreate = currentUser && currentUser.role !== 'VIEWER';
-
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 sm:gap-4">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">Investigation Cases</h1>
-          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">Search, allocate, and correlate intelligence networks.</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-primary)]">Investigation Cases</h1>
+          <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">Search, allocate, and correlate intelligence networks across cases.</p>
         </div>
-        {canCreate && (
-          <Link
-            href="/cases/create"
-            id="create-case-btn"
-            className="btn-primary text-xs w-full sm:w-auto px-5 py-2.5 rounded-lg shrink-0 justify-center"
-          >
-            + New Case
-          </Link>
-        )}
+        <Link
+          href="/cases/create"
+          id="create-case-btn"
+          className="btn-primary text-xs px-4 py-2 shrink-0"
+        >
+          + New Case
+        </Link>
       </div>
 
-      {/* Responsive Filters Pane */}
-      <div className="bg-white border border-[var(--card-border)] rounded-xl p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
+      {/* Filters Pane */}
+      <div className="card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div>
-          <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Search</label>
+          <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Search</label>
           <input
             type="text"
-            placeholder="Search title, case ID…"
+            placeholder="Title, case ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="form-input text-xs"
@@ -127,7 +123,7 @@ export default function CasesPage() {
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Classification</label>
+          <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Classification</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
@@ -143,7 +139,7 @@ export default function CasesPage() {
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Priority</label>
+          <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Priority</label>
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
@@ -158,7 +154,7 @@ export default function CasesPage() {
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Status</label>
+          <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -174,14 +170,14 @@ export default function CasesPage() {
           </select>
         </div>
 
-        <div className="sm:col-span-2 lg:col-span-1">
-          <label className="block text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1.5">Investigator</label>
+        <div>
+          <label className="block text-[10px] font-mono text-zinc-400 uppercase tracking-widest mb-1">Assigned Officer</label>
           <select
             value={assignedInvestigatorId}
             onChange={(e) => setAssignedInvestigatorId(e.target.value)}
             className="form-select text-xs"
           >
-            <option value="">All Investigators</option>
+            <option value="">All Officers</option>
             {investigators.map((inv) => (
               <option key={inv.id} value={inv.id}>
                 {inv.fullName}
@@ -193,30 +189,24 @@ export default function CasesPage() {
 
       {/* Main content area */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl text-xs flex gap-3">
-          <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <span>{error}</span>
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-md text-xs">
+          {error}
         </div>
       )}
 
       {loading ? (
-        <div className="flex py-20 items-center justify-center">
-          <svg className="animate-spin h-7 w-7 text-[var(--accent-color)]" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+        <div className="p-12 flex justify-center">
+          <CrimeGraphLoader size={32} text="Loading investigation case records…" />
         </div>
       ) : cases.length === 0 ? (
-        <div className="bg-white border border-[var(--card-border)] rounded-xl py-16 text-center">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">No cases found</p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">Try modifying your filter options or create a new case.</p>
+        <div className="card p-12 text-center">
+          <p className="text-xs font-semibold text-black">No cases match filters</p>
+          <p className="text-xs text-zinc-500 mt-1">Modify search queries or create a new case record.</p>
         </div>
       ) : (
-        <>
+        <div className="card overflow-hidden">
           {/* Desktop & Tablet Table View */}
-          <div className="hidden sm:block table-container bg-white border border-[var(--card-border)] rounded-xl">
+          <div className="hidden sm:block table-container">
             <table className="data-table">
               <thead>
                 <tr>
@@ -225,7 +215,7 @@ export default function CasesPage() {
                   <th>Classification</th>
                   <th>Priority</th>
                   <th>Status</th>
-                  <th>Investigator</th>
+                  <th>Officer</th>
                   <th>Created</th>
                   <th>Action</th>
                 </tr>
@@ -233,39 +223,38 @@ export default function CasesPage() {
               <tbody>
                 {cases.map((c) => (
                   <tr key={c.id}>
-                    <td className="font-mono font-bold text-[var(--accent-color)] text-[11px]">{c.caseNumber}</td>
-                    <td className="font-semibold text-[var(--text-primary)]">{c.title}</td>
-                    <td className="text-[var(--text-secondary)]">{(c.caseType || '').replace(/_/g, ' ')}</td>
+                    <td className="font-mono font-bold text-black text-[11px]">{c.caseNumber}</td>
+                    <td className="font-semibold text-black max-w-[240px] truncate">{c.title}</td>
+                    <td className="text-zinc-600 text-xs">{(c.caseType || '').replace(/_/g, ' ')}</td>
                     <td>
                       <span className={`badge ${
-                        c.priority === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
-                        c.priority === 'HIGH' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                        c.priority === 'MEDIUM' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                        'bg-stone-50 border-stone-200 text-stone-500'
+                        c.priority === 'CRITICAL' ? 'badge-critical' :
+                        c.priority === 'HIGH' ? 'badge-high' :
+                        c.priority === 'MEDIUM' ? 'badge-medium' : 'badge-low'
                       }`}>
                         {c.priority}
                       </span>
                     </td>
                     <td>
-                      <span className="flex items-center gap-1.5 text-[var(--text-secondary)] text-xs">
+                      <span className="flex items-center gap-1.5 text-zinc-700 text-xs font-medium">
                         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                          c.status === 'ACTIVE' || c.status === 'OPEN' ? 'bg-[var(--teal-accent)]' :
+                          c.status === 'ACTIVE' || c.status === 'OPEN' ? 'bg-emerald-500' :
                           c.status === 'UNDER_REVIEW' ? 'bg-amber-500 animate-pulse' :
-                          'bg-[var(--border)]'
+                          'bg-zinc-300'
                         }`} />
                         {(c.status || '').replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="font-medium text-[var(--text-primary)]">
-                      {c.assignedInvestigator?.fullName || <span className="text-[var(--text-tertiary)]">&mdash;</span>}
+                    <td className="text-zinc-700 text-xs">
+                      {c.assignedInvestigator?.fullName || <span className="text-zinc-400">&mdash;</span>}
                     </td>
-                    <td className="text-[var(--text-tertiary)]">
+                    <td className="text-zinc-400 text-[11px]">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </td>
                     <td>
                       <Link
                         href={`/cases/${c.id}`}
-                        className="btn-secondary text-[11px] px-3 py-1.5 rounded-lg"
+                        className="btn-secondary text-[11px] px-2.5 py-1"
                       >
                         View
                       </Link>
@@ -276,56 +265,48 @@ export default function CasesPage() {
             </table>
           </div>
 
-          {/* Mobile Card Representation (< 640px) */}
-          <div className="sm:hidden space-y-3">
+          {/* Mobile Card List (< 640px) */}
+          <div className="sm:hidden divide-y divide-zinc-100">
             {cases.map((c) => (
-              <div key={c.id} className="bg-white border border-[var(--card-border)] rounded-xl p-4 space-y-3">
+              <div key={c.id} className="p-4 space-y-2.5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <span className="font-mono font-bold text-[var(--accent-color)] text-[11px] block">{c.caseNumber}</span>
-                    <h3 className="font-bold text-sm text-[var(--text-primary)] mt-0.5">{c.title}</h3>
+                    <span className="font-mono font-bold text-black text-[11px] block">{c.caseNumber}</span>
+                    <h3 className="font-semibold text-xs text-black mt-0.5">{c.title}</h3>
                   </div>
                   <span className={`badge shrink-0 ${
-                    c.priority === 'CRITICAL' ? 'bg-red-50 border-red-200 text-red-700' :
-                    c.priority === 'HIGH' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                    c.priority === 'MEDIUM' ? 'bg-blue-50 border-blue-200 text-blue-700' :
-                    'bg-stone-50 border-stone-200 text-stone-500'
+                    c.priority === 'CRITICAL' ? 'badge-critical' :
+                    c.priority === 'HIGH' ? 'badge-high' :
+                    c.priority === 'MEDIUM' ? 'badge-medium' : 'badge-low'
                   }`}>
                     {c.priority}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-[var(--border-subtle)]">
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
                   <div>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Type</span>
-                    <span className="text-[var(--text-secondary)]">{(c.caseType || '').replace(/_/g, ' ')}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Type</span>
+                    <p className="text-zinc-700 font-medium">{(c.caseType || '').replace(/_/g, ' ')}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Status</span>
-                    <span className="text-[var(--text-secondary)] font-medium">{(c.status || '').replace(/_/g, ' ')}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Investigator</span>
-                    <span className="text-[var(--text-primary)] font-medium truncate block">
-                      {c.assignedInvestigator?.fullName || 'Unassigned'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-semibold">Created</span>
-                    <span className="text-[var(--text-tertiary)]">{new Date(c.createdAt).toLocaleDateString()}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Status</span>
+                    <p className="text-zinc-700 font-medium">{(c.status || '').replace(/_/g, ' ')}</p>
                   </div>
                 </div>
 
-                <Link
-                  href={`/cases/${c.id}`}
-                  className="btn-secondary w-full text-center text-xs py-2 rounded-lg justify-center mt-1"
-                >
-                  Open Case Details →
-                </Link>
+                <div className="pt-2 border-t border-zinc-100 flex items-center justify-between">
+                  <span className="text-[10px] text-zinc-400">{new Date(c.createdAt).toLocaleDateString()}</span>
+                  <Link
+                    href={`/cases/${c.id}`}
+                    className="btn-secondary text-[11px] px-3 py-1"
+                  >
+                    Open Case →
+                  </Link>
+                </div>
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

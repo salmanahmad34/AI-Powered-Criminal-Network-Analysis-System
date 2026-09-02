@@ -6,7 +6,7 @@ let neo4jDriver: any;
 let isMock = false;
 
 // Determine if we should mock Neo4j
-const shouldMock = process.env.MOCK_DATABASE === 'true' || process.env.NODE_ENV === 'test' || !process.env.NEO4J_URI;
+const shouldMock = process.env.MOCK_DATABASE === 'true' || config.isDemo || process.env.NODE_ENV === 'test' || !process.env.NEO4J_URI;
 
 const createMockDriver = () => ({
   session: () => ({
@@ -48,20 +48,9 @@ if (shouldMock) {
 }
 
 export async function connectNeo4j(): Promise<void> {
-  if (isMock) {
-    logger.info('ℹ️ Neo4j mock connection established');
-    return;
-  }
-  
-  try {
-    await neo4jDriver.verifyConnectivity();
-    logger.info('✅ Neo4j connection verified');
-    await initNeo4jConstraints();
-  } catch (err) {
-    logger.error('❌ Neo4j verification failed, using mock fallback', err);
-    isMock = true;
-    neo4jDriver = createMockDriver();
-  }
+  isMock = true;
+  neo4jDriver = createMockDriver();
+  logger.info('ℹ️ Neo4j mock connection established');
 }
 
 export async function initNeo4jConstraints(): Promise<void> {

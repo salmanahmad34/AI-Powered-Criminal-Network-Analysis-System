@@ -96,7 +96,7 @@ router.post(
   upload.array('files', 20),
   async (req: Request, res: Response) => {
     try {
-      const caseId = req.params.caseId;
+      const caseId = req.params.caseId as string;
       const userId = req.user!.userId;
       const dataCategory = (req.body.dataCategory as DataCategory) || 'OTHER';
 
@@ -141,7 +141,7 @@ router.post(
       await recordAudit(userId, AuditAction.FILE_UPLOADED, 'document', caseId, {
         fileCount: files.length,
         caseNumber: caseRecord.caseNumber,
-      }, req.ip || undefined);
+      }, typeof req.ip === 'string' ? req.ip : undefined);
 
       res.status(201).json({ documents, count: documents.length });
     } catch (err) {
@@ -158,7 +158,7 @@ router.post(
 router.get('/cases/:caseId/documents', authorize('documents:view'), async (req: Request, res: Response) => {
   try {
     const docs = await prisma.document.findMany({
-      where: { caseId: req.params.caseId },
+      where: { caseId: req.params.caseId as string },
       include: {
         uploadedBy: { select: { id: true, fullName: true } },
         _count: { select: { extractedEntities: true, extractedRelations: true } },
@@ -167,7 +167,7 @@ router.get('/cases/:caseId/documents', authorize('documents:view'), async (req: 
     });
 
     // Convert BigInt to string for JSON serialization
-    const serialized = docs.map(d => ({
+    const serialized = docs.map((d: any) => ({
       ...d,
       fileSize: d.fileSize.toString(),
     }));

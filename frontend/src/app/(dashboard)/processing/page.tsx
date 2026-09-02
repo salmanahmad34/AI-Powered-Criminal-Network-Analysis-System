@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import CrimeGraphLoader from '@/components/CrimeGraphLoader';
 
 interface ProcessingJob {
   id: string;
@@ -43,125 +44,114 @@ export default function ProcessingMonitorPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const statusStyles: Record<string, string> = {
-    COMPLETED: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-    PROCESSING: 'bg-blue-50 border-blue-200 text-blue-700',
-    VALIDATING: 'bg-amber-50 border-amber-200 text-amber-700',
-    QUEUED: 'bg-stone-50 border-stone-200 text-stone-600',
-    FAILED: 'bg-red-50 border-red-200 text-red-700',
-  };
-
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">Processing Monitor</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text-primary)]">Processing Monitor</h1>
         <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
-          Monitor background validation, registration, and AI parsing queues.
+          Monitor background validation, registration, and AI parsing telemetry queues.
         </p>
       </div>
 
       {loading && jobs.length === 0 ? (
-        <div className="flex py-20 justify-center">
-          <svg className="animate-spin h-7 w-7 text-[var(--accent-color)]" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
+        <div className="p-12 flex justify-center">
+          <CrimeGraphLoader size={32} text="Loading processing job queue telemetry…" />
         </div>
       ) : jobs.length === 0 ? (
-        <div className="bg-white border border-[var(--card-border)] rounded-xl py-16 text-center">
-          <div className="w-12 h-12 bg-[var(--surface-muted)] rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-[var(--text-tertiary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card p-12 text-center space-y-3">
+          <div className="w-10 h-10 bg-zinc-100 border border-zinc-200 rounded-md text-zinc-500 flex items-center justify-center mx-auto">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             </svg>
           </div>
-          <p className="text-sm font-semibold text-[var(--text-primary)]">No processing jobs recorded</p>
-          <p className="text-xs text-[var(--text-secondary)] mt-1">Upload synthetic datasets via a case Data Center tab to start.</p>
+          <p className="text-xs font-semibold text-black">No active processing jobs recorded</p>
+          <p className="text-xs text-zinc-500 max-w-sm mx-auto">Upload synthetic datasets in Data Center to start processing tasks.</p>
+          <Link href="/datacenter" className="btn-primary text-xs inline-flex px-4 py-2 mt-2">
+            Upload Dataset
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 gap-5">
           {jobs.map((job) => {
             const isCompleted = job.status === 'COMPLETED';
             return (
-              <div key={job.id} className="bg-white border border-[var(--card-border)] rounded-xl p-4 sm:p-6 space-y-4 sm:space-y-5">
+              <div key={job.id} className="card p-5 space-y-4">
                 {/* Job header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-[var(--border-subtle)]">
-                  <div className="min-w-0 w-full sm:w-auto">
-                    <p className="text-[10px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">Job ID</p>
-                    <p className="text-xs sm:text-sm font-bold text-[var(--accent-color)] font-mono truncate mt-0.5">{job.id}</p>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-zinc-100">
+                  <div>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block">Job ID</span>
+                    <p className="text-xs font-mono font-semibold text-black truncate mt-0.5">{job.id}</p>
                   </div>
-                  <div className="flex items-center justify-between w-full sm:w-auto gap-3 shrink-0">
-                    <span className={`badge ${statusStyles[job.status] || 'bg-stone-50 border-stone-200 text-stone-600'} ${job.status === 'PROCESSING' ? 'animate-pulse' : ''}`}>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className={`badge ${
+                      job.status === 'COMPLETED' ? 'badge-success' :
+                      job.status === 'FAILED' ? 'badge-critical' : 'badge-medium animate-pulse'
+                    }`}>
                       {job.status}
                     </span>
-                    <span className="text-xs text-[var(--text-secondary)]">
+                    <span className="text-xs font-mono text-zinc-500">
                       {job.processedFiles} / {job.totalFiles} files
                     </span>
                   </div>
                 </div>
 
                 {/* Progress bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-[var(--text-secondary)]">Ingestion Progress</span>
-                    <span className="text-[var(--text-primary)] font-bold">{job.progress}%</span>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-zinc-600">Pipeline Ingestion Progress</span>
+                    <span className="font-mono text-black font-semibold">{job.progress}%</span>
                   </div>
-                  <div className="h-2 w-full bg-[var(--surface-muted)] rounded-full overflow-hidden border border-[var(--border-subtle)]">
+                  <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden border border-zinc-200">
                     <div
-                      className={`h-full transition-all duration-500 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-[var(--teal-accent)]'}`}
+                      className={`h-full transition-all duration-500 rounded-full ${isCompleted ? 'bg-emerald-500' : 'bg-black'}`}
                       style={{ width: `${job.progress}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Stage Checklist */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 pt-2">
-                  {/* Phase 2 */}
-                  <div className="bg-[var(--surface-muted)] p-3.5 sm:p-4 rounded-lg border border-[var(--border-subtle)]">
-                    <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-2.5">Phase 2 — Ingestion</p>
-                    <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-zinc-50 p-3 rounded-md border border-zinc-200 space-y-2">
+                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Phase 1–2 Ingestion</p>
+                    <div className="space-y-1.5">
                       {[
                         { label: 'File Ingestion & Checksum', done: true },
                         { label: 'Synchronous Struct Check', done: job.progress >= 40 },
                         { label: 'Evidence Vault Registration', done: job.progress >= 100 },
                       ].map((step) => (
                         <div key={step.label} className="flex items-center gap-2">
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${step.done ? 'bg-emerald-500' : 'bg-[var(--border)]'}`} />
-                          <span className={`text-xs ${step.done ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'}`}>{step.label}</span>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${step.done ? 'bg-emerald-500' : 'bg-zinc-300'}`} />
+                          <span className={`text-[11px] ${step.done ? 'text-black font-medium' : 'text-zinc-400'}`}>{step.label}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Phase 3-4 */}
-                  <div className="bg-[var(--surface-muted)] p-3.5 sm:p-4 rounded-lg border border-[var(--border-subtle)] opacity-60">
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">Phase 3–4 — Analytics</p>
-                    <div className="space-y-2">
-                      {[
-                        'AI Entity Extraction (P3)',
-                        'Probabilistic Link Matching (P4)',
-                      ].map((step) => (
+                  <div className="bg-zinc-50 p-3 rounded-md border border-zinc-200 opacity-75 space-y-2">
+                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Phase 3–4 Analytics</p>
+                    <div className="space-y-1.5">
+                      {['AI Entity Extraction', 'Probabilistic Link Matching'].map((step) => (
                         <div key={step} className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--border)] shrink-0" />
-                          <span className="text-xs text-[var(--text-tertiary)]">{step}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0" />
+                          <span className="text-[11px] text-zinc-500">{step}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  {/* Phase 5 */}
-                  <div className="bg-[var(--surface-muted)] p-3.5 sm:p-4 rounded-lg border border-[var(--border-subtle)] opacity-60 sm:col-span-2 md:col-span-1">
-                    <p className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-2.5">Phase 5 — Graph</p>
-                    <div className="space-y-2">
+                  <div className="bg-zinc-50 p-3 rounded-md border border-zinc-200 opacity-75 space-y-2">
+                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Phase 5 Graph Sync</p>
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--border)] shrink-0" />
-                        <span className="text-xs text-[var(--text-tertiary)]">Neo4j Graph DB Sync</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300 shrink-0" />
+                        <span className="text-[11px] text-zinc-500">Neo4j Link Graph Sync</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Footer */}
-                <div className="text-[10px] text-[var(--text-tertiary)] flex flex-col sm:flex-row justify-between gap-1 pt-1">
+                <div className="text-[10px] font-mono text-zinc-400 flex flex-col sm:flex-row justify-between gap-1 pt-1 border-t border-zinc-100">
                   <span>Started by: {job.startedBy?.fullName || 'System'}</span>
                   <span>
                     {job.startedAt && `Triggered: ${new Date(job.startedAt).toLocaleString()}`}

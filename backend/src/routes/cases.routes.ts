@@ -60,24 +60,27 @@ async function generateCaseNumber(): Promise<string> {
 async function userHasCaseAccess(userId: string, caseId: string, userRole: string): Promise<boolean> {
   if (userRole === 'ADMIN') return true;
 
+  const caseRecord = await prisma.case.findUnique({
+    where: { id: caseId },
+    select: { createdById: true, assignedInvestigatorId: true },
+  });
+
+  if (caseRecord?.createdById === userId || caseRecord?.assignedInvestigatorId === userId) {
+    return true;
+  }
+
   const assignment = await prisma.caseAssignment.findUnique({
     where: {
       caseId_userId: { caseId, userId },
     },
   });
 
-  // Case creator also has access
-  const caseRecord = await prisma.case.findUnique({
-    where: { id: caseId },
-    select: { createdById: true },
-  });
-
-  return !!assignment || caseRecord?.createdById === userId;
+  return !!assignment;
 }
 
 /**
  * GET /api/cases
- * List cases — scoped by user assignment.
+ * List cases — scoped by user assignment for Investigators/Officers.
  */
 router.get('/', authorize('cases:view'), async (req: Request, res: Response) => {
   try {
@@ -91,10 +94,11 @@ router.get('/', authorize('cases:view'), async (req: Request, res: Response) => 
     // Build where clause
     const where: Record<string, unknown> = {};
 
-    // Scope by assignment (unless admin)
+    // Scope by assignment for Officers (unless ADMIN)
     if (userRole !== 'ADMIN') {
       where.OR = [
         { createdById: userId },
+        { assignedInvestigatorId: userId },
         { assignments: { some: { userId } } },
       ];
     }
@@ -113,7 +117,8 @@ router.get('/', authorize('cases:view'), async (req: Request, res: Response) => 
       prisma.case.findMany({
         where: where as any,
         include: {
-          createdBy: { select: { id: true, fullName: true } },
+          createdBy: { select: { id: true, fullName: true, email: true } },
+          assignedInvestigator: { select: { id: true, fullName: true, email: true } },
           assignments: {
             include: { user: { select: { id: true, fullName: true, role: true } } },
           },
@@ -213,7 +218,7 @@ router.post('/', authorize('cases:create'), async (req: Request, res: Response) 
  */
 router.get('/:id', authorize('cases:view'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
@@ -248,7 +253,7 @@ router.get('/:id', authorize('cases:view'), async (req: Request, res: Response) 
       return;
     }
 
-    await recordAudit(userId, AuditAction.CASE_VIEWED, 'case', caseId, undefined, req.ip || undefined);
+    await recordAudit(userId, AuditAction.CASE_VIEWED, 'case', caseId, undefined, typeof req.ip === 'string' ? req.ip : undefined);
 
     res.json({ case: caseDetail });
   } catch (err) {
@@ -262,7 +267,7 @@ router.get('/:id', authorize('cases:view'), async (req: Request, res: Response) 
  */
 router.patch('/:id', authorize('cases:update'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
@@ -310,13 +315,13 @@ router.patch('/:id', authorize('cases:update'), async (req: Request, res: Respon
         await recordAudit(userId, AuditAction.CASE_ASSIGNED, 'case', caseId, {
           caseNumber: updated.caseNumber,
           assignedInvestigatorId: parsed.data.assignedInvestigatorId,
-        }, req.ip || undefined);
+        }, typeof req.ip === 'string' ? req.ip : undefined);
       }
     }
 
     await recordAudit(userId, AuditAction.CASE_UPDATED, 'case', caseId, {
       fields: Object.keys(parsed.data),
-    }, req.ip || undefined);
+    }, typeof req.ip === 'string' ? req.ip : undefined);
 
     res.json({ case: updated });
   } catch (err) {
@@ -330,7 +335,7 @@ router.patch('/:id', authorize('cases:update'), async (req: Request, res: Respon
  */
 router.post('/:id/assign', authorize('cases:assign'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const { userId: targetUserId, role = 'investigator' } = req.body;
 
     if (!targetUserId || typeof targetUserId !== 'string') {
@@ -370,7 +375,7 @@ router.post('/:id/assign', authorize('cases:assign'), async (req: Request, res: 
  */
 router.get('/:id/notes', authorize('notes:view'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
@@ -399,7 +404,7 @@ router.get('/:id/notes', authorize('notes:view'), async (req: Request, res: Resp
  */
 router.post('/:id/notes', authorize('notes:create'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
 
     const contentSchema = z.object({
@@ -520,7 +525,7 @@ function validateFile(
         const sheet = wb.Sheets[firstSheet];
         const data: any[] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
         if (data.length > 0) {
-          headers = data[0].map(h => String(h || '').trim());
+          headers = data[0].map((h: any) => String(h || '').trim());
           rowCount = data.length - 1;
         }
       }
@@ -713,7 +718,7 @@ async function runExtractionJob(jobId: string, caseId: string, docIds: string[],
  */
 router.get('/:id/data', authorize('cases:view'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
@@ -751,7 +756,7 @@ router.post(
   uploadMemory.array('files', 20),
   async (req: Request, res: Response) => {
     try {
-      const caseId = req.params.id;
+      const caseId = req.params.id as string;
       const userId = req.user!.userId;
       const userRole = req.user!.role;
 
@@ -777,11 +782,11 @@ router.post(
       if (failedCount > 0) {
         await recordAudit(userId, AuditAction.FILE_REJECTED, 'case', caseId, {
           failedCount,
-        }, req.ip || undefined);
+        }, typeof req.ip === 'string' ? req.ip : undefined);
       } else {
         await recordAudit(userId, AuditAction.FILE_VALIDATED, 'case', caseId, {
           totalFiles: files.length,
-        }, req.ip || undefined);
+        }, typeof req.ip === 'string' ? req.ip : undefined);
       }
 
       res.json({ results });
@@ -802,7 +807,7 @@ router.post(
   uploadDisk.array('files', 20),
   async (req: Request, res: Response) => {
     try {
-      const caseId = req.params.id;
+      const caseId = req.params.id as string;
       const userId = req.user!.userId;
       const userRole = req.user!.role;
 
@@ -821,7 +826,7 @@ router.post(
 
       await recordAudit(userId, AuditAction.FILE_UPLOAD_STARTED, 'case', caseId, {
         fileCount: files.length,
-      }, req.ip || undefined);
+      }, typeof req.ip === 'string' ? req.ip : undefined);
 
       const documents = [];
 
@@ -871,12 +876,12 @@ router.post(
       await recordAudit(userId, AuditAction.FILE_UPLOADED, 'case', caseId, {
         fileCount: files.length,
         documentIds: documents.map(d => d.id),
-      }, req.ip || undefined);
+      }, typeof req.ip === 'string' ? req.ip : undefined);
 
       await recordAudit(userId, AuditAction.PROCESSING_JOB_CREATED, 'processingJob', job.id, {
         caseId,
         fileCount: files.length,
-      }, req.ip || undefined);
+      }, typeof req.ip === 'string' ? req.ip : undefined);
 
       // Trigger background real extraction loop
       runExtractionJob(job.id, caseId, documents.map(d => d.id), userId);
@@ -899,7 +904,7 @@ router.post(
  */
 router.get('/:id/activity', authorize('cases:view'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
@@ -934,7 +939,7 @@ router.get('/:id/activity', authorize('cases:view'), async (req: Request, res: R
  */
 router.get('/:id/relationships', authorize('entities:view'), async (req: Request, res: Response) => {
   try {
-    const caseId = req.params.id;
+    const caseId = req.params.id as string;
     const userId = req.user!.userId;
     const userRole = req.user!.role;
 
